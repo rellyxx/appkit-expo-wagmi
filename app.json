@@ -8,9 +8,11 @@
     "scheme": "appkitexpowagmi",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.relly.appkitexpowagmi"
     },
     "android": {
+      "package": "com.relly.appkitexpowagmi",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -38,6 +40,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b888fb60-7870-42da-8a72-c8222615c704"
+      }
     }
   }
 }

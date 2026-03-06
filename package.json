@@ -8,7 +8,11 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "eas:android": "eas build -p android --profile production",
+    "eas:ios": "eas build -p ios --profile production",
+    "eas:dev:android": "eas build -p android --profile development",
+    "eas:dev:ios": "eas build -p ios --profile development"
   },
   "dependencies": {
     "@expo/metro-runtime": "~55.0.6",
@@ -56,6 +60,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.10",
+    "eas-cli": "^18.1.0",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~55.0.0",
     "typescript": "~5.9.2"
