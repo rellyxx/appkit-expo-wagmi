@@ -1,8 +1,9 @@
 import '@walletconnect/react-native-compat';
-import { AppKitButton } from '@reown/appkit-react-native';
+import { AppKitButton, solana } from '@reown/appkit-react-native';
+import { ModalController, PublicStateController } from '@reown/appkit-core-react-native';
 import { Image } from 'expo-image';
 import React from 'react';
-import { StyleSheet, View, Text } from 'react-native';
+import { StyleSheet, View, Text, Pressable } from 'react-native';
 
 import { MobileWave } from '@/components/MobileWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
@@ -13,6 +14,11 @@ import { WalletInfoView } from '@/components/WalletInfoView';
 import { reownDarkGray, reownOrange } from '@/constants/Colors';
 
 export default function HomeScreen() {
+  const onPressConnectSolana = () => {
+    PublicStateController.set({ selectedNetworkId: solana.caipNetworkId });
+    ModalController.open({ view: 'Connect' });
+  };
+
   return (
     <>
       <ParallaxScrollView
@@ -40,6 +46,9 @@ export default function HomeScreen() {
         
         <View style={styles.appKitButtonContainer}>
           <AppKitButton connectStyle={styles.appKitButton} label='Connect Wallet' />
+          <Pressable onPress={onPressConnectSolana} style={styles.solanaButton}>
+            <Text style={styles.solanaButtonText}>连接 Solana 钱包1</Text>
+          </Pressable>
         </View>
       </ParallaxScrollView>
     </>
@@ -65,6 +74,18 @@ const styles = StyleSheet.create({
   appKitButton: {
     marginTop: 20,
     backgroundColor: reownOrange,
+  },
+  solanaButton: {
+    marginTop: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#14F195',
+    borderRadius: 12,
+  },
+  solanaButtonText: {
+    color: '#000',
+    fontWeight: '600',
+    fontSize: 16,
   },
   headerText: {
     fontFamily: 'KHTekaMono',

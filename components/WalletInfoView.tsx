@@ -1,6 +1,6 @@
 import React from 'react';
 import {Image, StyleSheet, StyleProp, ViewStyle} from 'react-native';
-import {useWalletInfo} from '@reown/appkit-react-native';
+import {useWalletInfo, useAccount} from '@reown/appkit-react-native';
 import {FlexView, Text} from '@reown/appkit-ui-react-native';
 
 interface Props {
@@ -9,6 +9,7 @@ interface Props {
 
 export function WalletInfoView({style}: Props) {
   const {walletInfo} = useWalletInfo();
+  const {address, namespace} = useAccount();
 
   return walletInfo ? (
     <FlexView style={style} alignItems="center">
@@ -23,6 +24,9 @@ export function WalletInfoView({style}: Props) {
           <Text variant="small-400">{walletInfo?.name}</Text>
         )}
       </FlexView>
+      {namespace === 'solana' && !!address && (
+        <Text variant="small-400" style={styles.address}>{address}</Text>
+      )}
     </FlexView>
   ) : null;
 }
@@ -36,5 +40,8 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 5,
     marginRight: 4,
+  },
+  address: {
+    marginTop: 6,
   },
 });
