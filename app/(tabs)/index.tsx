@@ -45,9 +45,9 @@ export default function HomeScreen() {
         <WalletInfoView />
         
         <View style={styles.appKitButtonContainer}>
-          <AppKitButton connectStyle={styles.appKitButton} label='Connect Wallet' />
+          <AppKitButton connectStyle={styles.appKitButton} label='连接 EVM 钱包' />
           <Pressable onPress={onPressConnectSolana} style={styles.solanaButton}>
-            <Text style={styles.solanaButtonText}>连接 Solana 钱包1</Text>
+            <Text style={styles.solanaButtonText}>连接 Solana 钱包</Text>
           </Pressable>
         </View>
       </ParallaxScrollView>

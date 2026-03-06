@@ -11,7 +11,7 @@ import { WagmiAdapter } from "@reown/appkit-wagmi-react-native";
 import { SolanaAdapter, PhantomConnector, SolflareConnector } from "@reown/appkit-solana-react-native";
 import { BitcoinAdapter } from "@reown/appkit-bitcoin-react-native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { arbitrum, mainnet, polygon } from "@wagmi/core/chains";
+import { arbitrum, mainnet, polygon, bsc, base } from "@wagmi/core/chains";
 import { WagmiProvider } from "wagmi";
 
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
@@ -46,12 +46,12 @@ const metadata = {
   url: "https://reown.com/appkit",
   icons: ["https://avatars.githubusercontent.com/u/179229932"],
   redirect: {
-    native: "YOUR_APP_SCHEME://",
-    universal: "YOUR_APP_UNIVERSAL_LINK.com",
+    native: "appkitexpowagmi://",
+    universal: "https://reown.com/appkit",
   },
 };
 
-const networks = [mainnet, polygon, arbitrum];
+const networks = [mainnet, polygon, arbitrum, bsc, base];
 
 const wagmiAdapter = new WagmiAdapter({
   projectId,
@@ -66,12 +66,16 @@ const appkit = createAppKit({
   projectId,
   networks: [...networks, solana, bitcoin],
   adapters: [wagmiAdapter, solanaAdapter, bitcoinAdapter],
-  extraConnectors: [new PhantomConnector(), new SolflareConnector()],
+  extraConnectors: [new PhantomConnector({ cluster: 'mainnet-beta' }), new SolflareConnector({ cluster: 'mainnet-beta' })],
   metadata,
   clipboardClient,
   storage,
   defaultNetwork: mainnet, // Optional
   enableAnalytics: true, // Optional - defaults to your Cloud configuration
+  features: {
+    socials: false,
+    onramp: false
+  }
 });
 
 export default function RootLayout() {
