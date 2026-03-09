@@ -3,7 +3,7 @@ import { AppKitButton, solana } from '@reown/appkit-react-native';
 import { ModalController, PublicStateController } from '@reown/appkit-core-react-native';
 import { Image } from 'expo-image';
 import React from 'react';
-import { StyleSheet, View, Text, Pressable } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 
 import { MobileWave } from '@/components/MobileWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
@@ -24,88 +24,33 @@ export default function HomeScreen() {
       <ParallaxScrollView
         headerBackgroundColor={{ light: reownDarkGray, dark: reownDarkGray }}
         headerImage={
-          <View style={styles.headerContainer}>
-            <View style={styles.leftColumn}>
+          <View className="flex-1 flex-row justify-center items-center p-4">
+            <View className="flex-col w-1/2 h-full justify-end gap-2.5">
               <Image
                 source={require('@/assets/images/reown-logo.png')}
-                style={styles.reownLogo}
+                style={{ height: 48, width: 180 }}
               />
-              <Text style={styles.headerText}>
+              <Text className="font-[KHTekaMono] text-sm leading-6 font-semibold text-white">
                 Powering the future of the financial internet
               </Text>
             </View>
             <ReownFigures />
           </View>
         }>
-        <ThemedView style={styles.titleContainer}>
+        <ThemedView style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
           <ThemedText type="title">AppKit</ThemedText>
           <ThemedText type="subtitle">for React Native</ThemedText>
           <MobileWave />
         </ThemedView>
         <WalletInfoView />
-        
-        <View style={styles.appKitButtonContainer}>
-          <AppKitButton connectStyle={styles.appKitButton} label='连接 EVM 钱包' />
-          <Pressable onPress={onPressConnectSolana} style={styles.solanaButton}>
-            <Text style={styles.solanaButtonText}>连接 Solana 钱包</Text>
+
+        <View className="mt-5 justify-center items-center">
+          <AppKitButton connectStyle={{ marginTop: 20, backgroundColor: reownOrange }} label='连接 EVM 钱包' />
+          <Pressable onPress={onPressConnectSolana} className="mt-3 py-3 px-4 bg-[#14F195] rounded-xl">
+            <Text className="text-base text-center text-red-500 font-bold">连接 Solana 钱包</Text>
           </Pressable>
         </View>
       </ParallaxScrollView>
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-  },
-  reownLogo: {
-    height: 48,
-    width: 180,
-  },
-  appKitButtonContainer: {
-    marginTop: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  appKitButton: {
-    marginTop: 20,
-    backgroundColor: reownOrange,
-  },
-  solanaButton: {
-    marginTop: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#14F195',
-    borderRadius: 12,
-  },
-  solanaButtonText: {
-    color: '#000',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  headerText: {
-    fontFamily: 'KHTekaMono',
-    fontSize: 14,
-    lineHeight: 24,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  headerContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  leftColumn: {
-    flexDirection: 'column',
-    width: '50%',
-    height: '100%',
-    justifyContent: 'flex-end',
-    gap: 10,
-  },
-});
