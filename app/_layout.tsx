@@ -21,10 +21,12 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
+import * as SystemUI from 'expo-system-ui';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { storage } from "@/utils/StorageUtil";
 import { View } from 'react-native';
+import { useEffect } from 'react';
 
 const clipboardClient = {
   setString: async (value: string) => {
@@ -88,6 +90,10 @@ export default function RootLayout() {
     KHTekaMono: require('../assets/fonts/KHTekaMono-Regular.otf'),
   });
 
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync('#F4F6FB');
+  }, []);
+
   if (!loaded) {
     // Async font loading only occurs in development.
     return null;
@@ -102,7 +108,7 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="+not-found" />
           </Stack>
-          <StatusBar style="auto" />
+          <StatusBar style="dark" backgroundColor="#F4F6FB" translucent={false} />
           {/* This is a workaround for the Android modal issue. https://github.com/expo/expo/issues/32991#issuecomment-2489620459 */}
           <View style={{ position: "absolute", height: "100%", width: "100%" }}>
             <AppKit />
