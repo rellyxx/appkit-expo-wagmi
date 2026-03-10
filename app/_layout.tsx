@@ -102,7 +102,7 @@ const appkit = createAppKit({
   metadata,
   clipboardClient,
   storage,
-  defaultNetwork: mainnet, // Optional
+  defaultNetwork: pharosAtlanticTestnet, // Optional
   enableAnalytics: true, // Optional - defaults to your Cloud configuration
   themeVariables: {
     accent: themeColor,
