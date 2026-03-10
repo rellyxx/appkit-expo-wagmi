@@ -58,7 +58,32 @@ const metadata = {
   },
 };
 
-const networks = [mainnet, polygon, arbitrum, bsc, base, bscTestnet];
+const pharosAtlanticTestnet = {
+  id: 688689,
+  name: "Pharos Atlantic Testnet",
+  network: "Pharos Atlantic Testnet",
+  nativeCurrency: {
+    name: "PHRS",
+    symbol: "PHRS",
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: ["https://atlantic.dplabs-internal.com"],
+    },
+    public: {
+      http: ["https://atlantic.dplabs-internal.com"],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Pharos Atlantic Testnet",
+      url: "https://atlantic.pharosscan.xyz/",
+    },
+  },
+} as const;
+
+const networks = [mainnet, polygon, arbitrum, bsc, base, bscTestnet, pharosAtlanticTestnet];
 
 const wagmiAdapter = new WagmiAdapter({
   projectId,
