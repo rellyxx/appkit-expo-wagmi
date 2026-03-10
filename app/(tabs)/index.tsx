@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DashboardHeader, DASHBOARD_HEADER_HEIGHT } from '@/components/DashboardHeader';
 import { themeColor } from '@/constants/Colors';
 import { useGlobalState } from '@/store/useGlobalState';
+import { useAccount, useReadContracts } from 'wagmi';
+import { erc20Abi, formatUnits } from 'viem';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -14,6 +16,7 @@ export default function HomeScreen() {
   const scrollRef = React.useRef<ScrollView>(null);
   const swipeHandledRef = React.useRef(false);
   const reserves = useGlobalState((state) => state.reserves);
+  const { address, chainId } = useAccount();
 
   const deposits = [
     {
@@ -78,15 +81,53 @@ export default function HomeScreen() {
     WBTC: '₿',
   };
 
-  const availableToDeposit = reserves
-    .filter((reserve) => !reserve.isDropped)
-    .map((reserve) => ({
+  const activeReserves = React.useMemo(
+    () => reserves.filter((reserve) => !reserve.isDropped),
+    [reserves],
+  );
+
+  const balanceContracts = React.useMemo(
+    () =>
+      address
+        ? activeReserves.map((reserve) => ({
+            address: reserve.underlyingAsset as `0x${string}`,
+            abi: erc20Abi,
+            functionName: 'balanceOf' as const,
+            args: [address] as const,
+            chainId,
+          }))
+        : [],
+    [activeReserves, address, chainId],
+  );
+
+  const { data: balanceResults } = useReadContracts({
+    contracts: balanceContracts,
+    query: { enabled: balanceContracts.length > 0 },
+  });
+
+  const balancesBySymbol = React.useMemo(() => {
+    const map = new Map<string, string>();
+    activeReserves.forEach((reserve, index) => {
+      const result = balanceResults?.[index];
+      if (result?.status === 'success' && typeof result.result === 'bigint') {
+        const decimals = Number(reserve.decimals ?? 18);
+        const formatted = formatUnits(result.result, decimals);
+        map.set(reserve.symbol, formatted);
+      }
+    });
+    return map;
+  }, [activeReserves, balanceResults]);
+
+  const availableToDeposit = activeReserves.map((reserve) => {
+    const balance = balancesBySymbol.get(reserve.symbol);
+    return {
       symbol: reserve.symbol,
       name: reserve.name,
-      amount: `Wallet: -- ${reserve.symbol}`,
+      amount: balance ? `Wallet: ${balance} ${reserve.symbol}` : `Wallet: -- ${reserve.symbol}`,
       color: tokenColors[reserve.symbol] ?? themeColor,
       icon: tokenIcons[reserve.symbol] ?? reserve.symbol.slice(0, 1),
-    }));
+    };
+  });
 
   const borrows = [
     {

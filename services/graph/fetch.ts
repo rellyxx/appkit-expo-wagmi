@@ -88,6 +88,8 @@ export async function fetchReservesAction(
     error: null,
   });
   const chainId = get().chainId;
+  console.log({chainId});
+  
   const graphUrl = getGraphUrlByChainId(chainId);
   try {
     const client = createGraphClient(graphUrl);

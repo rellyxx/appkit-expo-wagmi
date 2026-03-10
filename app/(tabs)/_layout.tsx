@@ -10,10 +10,13 @@ import { useAccount } from 'wagmi';
 import { useGlobalState } from '@/store/useGlobalState';
 export default function TabLayout() {
   const {chainId} = useAccount();
-  const { fetchReserves } = useGlobalState();
+  const { fetchReserves, setChainId } = useGlobalState();
   useEffect(() => {
+    if (typeof chainId === 'number') {
+      setChainId(chainId);
+    }
     fetchReserves(chainId); 
-  }, [chainId, fetchReserves]);
+  }, [chainId, fetchReserves, setChainId]);
   return (
     <Tabs
       screenOptions={{

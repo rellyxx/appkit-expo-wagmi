@@ -12,7 +12,7 @@ import { WagmiAdapter } from "@reown/appkit-wagmi-react-native";
 import { SolanaAdapter, PhantomConnector, SolflareConnector } from "@reown/appkit-solana-react-native";
 import { BitcoinAdapter } from "@reown/appkit-bitcoin-react-native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { arbitrum, mainnet, polygon, bsc, base } from "@wagmi/core/chains";
+import { arbitrum, mainnet, polygon, bsc, base, bscTestnet } from "@wagmi/core/chains";
 import { WagmiProvider } from "wagmi";
 
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
@@ -58,7 +58,7 @@ const metadata = {
   },
 };
 
-const networks = [mainnet, polygon, arbitrum, bsc, base];
+const networks = [mainnet, polygon, arbitrum, bsc, base, bscTestnet];
 
 const wagmiAdapter = new WagmiAdapter({
   projectId,
