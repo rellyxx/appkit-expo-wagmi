@@ -3,6 +3,7 @@ import React from 'react';
 import { View, Text, Pressable, ScrollView, useWindowDimensions, PanResponder } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DashboardHeader, DASHBOARD_HEADER_HEIGHT } from '@/components/DashboardHeader';
+import { themeColor } from '@/constants/Colors';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -150,7 +151,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
 
-        <View className="bg-[#2F6DF6] rounded-[20px] p-5 gap-2 shadow-lg">
+        <View className="rounded-[20px] p-5 gap-2 shadow-lg" style={{ backgroundColor: themeColor }}>
           <Text className="text-sm font-semibold text-[#D6E4FF]">Net Worth</Text>
           <View className="self-start rounded-full bg-white/20 px-2.5 py-1.5">
             <Text className="text-xs font-semibold text-white">↗  +2.4% vs last week</Text>
@@ -159,18 +160,26 @@ export default function HomeScreen() {
 
         <View className="flex-row border-b border-[#E5E7EB]">
           <Pressable
-            className={`flex-1 items-center py-3 border-b-2 ${activeTab === 0 ? 'border-[#2F6DF6]' : 'border-transparent'}`}
+            className="flex-1 items-center py-3 border-b-2"
+            style={{ borderBottomColor: activeTab === 0 ? themeColor : 'transparent' }}
             onPress={() => handleTabPress(0)}
           >
-            <Text className={`text-sm ${activeTab === 0 ? 'font-bold text-[#2F6DF6]' : 'font-semibold text-[#6B7280]'}`}>
+            <Text
+              className={`text-sm ${activeTab === 0 ? 'font-bold' : 'font-semibold text-[#6B7280]'}`}
+              style={activeTab === 0 ? { color: themeColor } : undefined}
+            >
               Deposit
             </Text>
           </Pressable>
           <Pressable
-            className={`flex-1 items-center py-3 border-b-2 ${activeTab === 1 ? 'border-[#2F6DF6]' : 'border-transparent'}`}
+            className="flex-1 items-center py-3 border-b-2"
+            style={{ borderBottomColor: activeTab === 1 ? themeColor : 'transparent' }}
             onPress={() => handleTabPress(1)}
           >
-            <Text className={`text-sm ${activeTab === 1 ? 'font-bold text-[#2F6DF6]' : 'font-semibold text-[#6B7280]'}`}>
+            <Text
+              className={`text-sm ${activeTab === 1 ? 'font-bold' : 'font-semibold text-[#6B7280]'}`}
+              style={activeTab === 1 ? { color: themeColor } : undefined}
+            >
               Borrow
             </Text>
           </Pressable>
@@ -225,7 +234,7 @@ export default function HomeScreen() {
                       <Text className="text-[13px] text-[#6B7280] mt-0.5">{item.amount}</Text>
                     </View>
                   </View>
-                  <Pressable className="bg-[#2F6DF6] px-4 py-2 rounded-xl">
+                  <Pressable className="px-4 py-2 rounded-xl" style={{ backgroundColor: themeColor }}>
                     <Text className="text-[13px] font-bold text-white">Deposit</Text>
                   </Pressable>
                 </View>
@@ -269,7 +278,7 @@ export default function HomeScreen() {
                       <Text className="text-[13px] text-[#6B7280] mt-0.5">{item.amount}</Text>
                     </View>
                   </View>
-                  <Pressable className="bg-[#2F6DF6] px-4 py-2 rounded-xl">
+                  <Pressable className="px-4 py-2 rounded-xl" style={{ backgroundColor: themeColor }}>
                     <Text className="text-[13px] font-bold text-white">Borrow</Text>
                   </Pressable>
                 </View>

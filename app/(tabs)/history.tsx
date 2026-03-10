@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DashboardHeader, DASHBOARD_HEADER_HEIGHT } from '@/components/DashboardHeader';
+import { themeColor } from '@/constants/Colors';
 
 export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
@@ -29,7 +30,7 @@ export default function HistoryScreen() {
                 <Text className="text-[15px] font-bold text-[#111827]">{item.title}</Text>
                 <Text className="text-xs text-[#9CA3AF] mt-1">{item.time}</Text>
               </View>
-              <Text className="text-sm font-bold text-[#2F6DF6]">{item.amount}</Text>
+              <Text className="text-sm font-bold" style={{ color: themeColor }}>{item.amount}</Text>
             </View>
           ))}
         </View>

@@ -2,6 +2,7 @@ import React from 'react';
 import { Text, View, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppKitButton } from '@reown/appkit-react-native';
+import { themeColor } from '@/constants/Colors';
 
 type Props = {
   title: string;
@@ -34,7 +35,7 @@ export function DashboardHeader({ title }: Props) {
             paddingHorizontal: 12,
             height: 36,
             borderRadius: 12,
-            backgroundColor: '#EEF3FF',
+            backgroundColor: themeColor,
           }}
         />
       </View>

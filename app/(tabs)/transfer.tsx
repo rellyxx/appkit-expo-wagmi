@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, TextInput, Pressable, Text, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DashboardHeader, DASHBOARD_HEADER_HEIGHT } from '@/components/DashboardHeader';
+import { themeColor } from '@/constants/Colors';
 
 export default function TransferScreen() {
   const insets = useSafeAreaInsets();
@@ -24,7 +25,7 @@ export default function TransferScreen() {
           <View className="gap-2">
             <Text className="text-[13px] font-bold text-[#6B7280]">From</Text>
             <View className="flex-row items-center justify-between bg-[#F8FAFF] rounded-[14px] px-3 py-3">
-              <Text className="text-sm font-bold text-[#2F6DF6]">USDC</Text>
+              <Text className="text-sm font-bold" style={{ color: themeColor }}>USDC</Text>
               <TextInput
                 value={fromAmount}
                 onChangeText={setFromAmount}
@@ -51,7 +52,7 @@ export default function TransferScreen() {
             <Text className="text-xs font-semibold text-[#9CA3AF]">Rate: 1 USDC ≈ 0.00031 WETH</Text>
           </View>
 
-          <Pressable className="bg-[#2F6DF6] py-3 rounded-[14px] items-center">
+          <Pressable className="py-3 rounded-[14px] items-center" style={{ backgroundColor: themeColor }}>
             <Text className="text-[15px] font-bold text-white">Swap Now</Text>
           </Pressable>
         </View>

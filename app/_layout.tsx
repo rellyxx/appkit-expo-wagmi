@@ -25,6 +25,7 @@ import * as Clipboard from 'expo-clipboard';
 import * as SystemUI from 'expo-system-ui';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { themeColor } from '@/constants/Colors';
 import { storage } from "@/utils/StorageUtil";
 import { View } from 'react-native';
 import { useEffect } from 'react';
@@ -78,6 +79,9 @@ const appkit = createAppKit({
   storage,
   defaultNetwork: mainnet, // Optional
   enableAnalytics: true, // Optional - defaults to your Cloud configuration
+  themeVariables: {
+    accent: themeColor,
+  },
   features: {
     socials: false,
     onramp: false
