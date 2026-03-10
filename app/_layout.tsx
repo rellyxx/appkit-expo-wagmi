@@ -17,6 +17,7 @@ import { WagmiProvider } from "wagmi";
 
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
+import Constants from 'expo-constants';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
@@ -37,8 +38,10 @@ const clipboardClient = {
 // 0. Setup queryClient
 const queryClient = new QueryClient();
 
-// 1. Get projectId at https://dashboard.reown.com
-const projectId = "b8e39dfb697ba26ac5a77a4b29b35604"; // This project ID will only work for Expo Go. Use your own project ID for production.
+const projectId =
+  process.env.EXPO_PUBLIC_REOWN_PROJECT_ID ??
+  Constants.expoConfig?.extra?.reownProjectId ??
+  "b8e39dfb697ba26ac5a77a4b29b35604";
 
 
 
