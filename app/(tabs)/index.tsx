@@ -18,49 +18,6 @@ export default function HomeScreen() {
   const reserves = useGlobalState((state) => state.reserves);
   const { address, chainId } = useAccount();
 
-  const deposits = [
-    {
-      symbol: 'USDC',
-      amount: '500.00 USDC',
-      apy: '4.2%',
-      value: '$500.00',
-      color: '#3B82F6',
-      icon: '$',
-    },
-    {
-      symbol: 'WETH',
-      amount: '0.50 WETH',
-      apy: '3.8%',
-      value: '$1,250.00',
-      color: '#A855F7',
-      icon: 'Ξ',
-    },
-    {
-      symbol: 'USDT',
-      amount: '0.50 USDT',
-      apy: '3.8%',
-      value: '$1,250.00',
-      color: '#A855F7',
-      icon: 'Ξ',
-    },
-    {
-      symbol: 'BNB',
-      amount: '0.50 BNB',
-      apy: '3.8%',
-      value: '$1,250.00',
-      color: '#A855F7',
-      icon: 'Ξ',
-    },
-     {
-      symbol: 'BTC',
-      amount: '0.50 BTC',
-      apy: '3.8%',
-      value: '$1,250.00',
-      color: '#A855F7',
-      icon: 'Ξ',
-    },
-  ];
-
   const tokenColors: Record<string, string> = {
     USDC: '#3B82F6',
     USDT: '#14B8A6',
@@ -105,6 +62,25 @@ export default function HomeScreen() {
     query: { enabled: balanceContracts.length > 0 },
   });
 
+  const supplyBalanceContracts = React.useMemo(
+    () =>
+      address
+        ? activeReserves.map((reserve) => ({
+            address: reserve.bToken.id as `0x${string}`,
+            abi: erc20Abi,
+            functionName: 'balanceOf' as const,
+            args: [address] as const,
+            chainId,
+          }))
+        : [],
+    [activeReserves, address, chainId],
+  );
+
+  const { data: supplyBalanceResults } = useReadContracts({
+    contracts: supplyBalanceContracts,
+    query: { enabled: supplyBalanceContracts.length > 0 },
+  });
+
   const balancesBySymbol = React.useMemo(() => {
     const map = new Map<string, string>();
     activeReserves.forEach((reserve, index) => {
@@ -123,11 +99,38 @@ export default function HomeScreen() {
     return {
       symbol: reserve.symbol,
       name: reserve.name,
-      amount: balance ? `Wallet: ${balance} ${reserve.symbol}` : `Wallet: -- ${reserve.symbol}`,
+      amount: balance ? `${balance} ${reserve.symbol}` : `-- ${reserve.symbol}`,
       color: tokenColors[reserve.symbol] ?? themeColor,
       icon: tokenIcons[reserve.symbol] ?? reserve.symbol.slice(0, 1),
     };
   });
+
+  const deposits = activeReserves
+    .map((reserve, index) => {
+      const result = supplyBalanceResults?.[index];
+      if (result?.status !== 'success' || typeof result.result !== 'bigint' || result.result <= 0n) {
+        return null;
+      }
+      const decimals = Number(reserve.decimals ?? 18);
+      const tokenAmount = formatUnits(result.result, decimals);
+      const parsedAmount = Number(tokenAmount);
+      const displayAmount = Number.isFinite(parsedAmount)
+        ? parsedAmount.toLocaleString(undefined, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: parsedAmount >= 1 ? 4 : 8,
+          })
+        : tokenAmount;
+      const supplyApy = Number(formatUnits(BigInt(reserve.liquidityRate ?? '0'), 27)) * 100;
+      return {
+        symbol: reserve.symbol,
+        amount: `${displayAmount} ${reserve.symbol}`,
+        apy: `${supplyApy.toFixed(2)}%`,
+        value: '--',
+        color: tokenColors[reserve.symbol] ?? themeColor,
+        icon: tokenIcons[reserve.symbol] ?? reserve.symbol.slice(0, 1),
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
 
   const borrows = [
     {
@@ -261,23 +264,29 @@ export default function HomeScreen() {
                 <Text className="text-xs font-semibold text-[#9CA3AF]">APY (%)</Text>
               </View>
 
-              {deposits.map((item) => (
-                <View key={item.symbol} className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-md">
-                  <View className="flex-row items-center gap-3">
-                    <View className="h-11 w-11 rounded-full items-center justify-center" style={{ backgroundColor: `${item.color}22` }}>
-                      <Text className="text-lg font-bold" style={{ color: item.color }}>{item.icon}</Text>
-                    </View>
-                    <View>
-                      <Text className="text-base font-bold text-[#111827]">{item.symbol}</Text>
-                      <Text className="text-[13px] text-[#6B7280] mt-0.5">{item.amount}</Text>
-                    </View>
-                  </View>
-                  <View className="items-end gap-1">
-                    <Text className="text-sm font-bold text-[#16A34A]">{item.apy}</Text>
-                    <Text className="text-[13px] text-[#6B7280]">{item.value}</Text>
-                  </View>
+              {deposits.length === 0 ? (
+                <View className="bg-white rounded-2xl p-4 shadow-md">
+                  <Text className="text-[13px] text-[#6B7280]">No supplied assets yet</Text>
                 </View>
-              ))}
+              ) : (
+                deposits.map((item) => (
+                  <View key={item.symbol} className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-md">
+                    <View className="flex-row items-center gap-3">
+                      <View className="h-11 w-11 rounded-full items-center justify-center" style={{ backgroundColor: `${item.color}22` }}>
+                        <Text className="text-lg font-bold" style={{ color: item.color }}>{item.icon}</Text>
+                      </View>
+                      <View>
+                        <Text className="text-base font-bold text-[#111827]">{item.symbol}</Text>
+                        <Text className="text-[13px] text-[#6B7280] mt-0.5">{item.amount}</Text>
+                      </View>
+                    </View>
+                    <View className="items-end gap-1">
+                      <Text className="text-sm font-bold text-[#16A34A]">{item.apy}</Text>
+                      <Text className="text-[13px] text-[#6B7280]">{item.value}</Text>
+                    </View>
+                  </View>
+                ))
+              )}
 
               <Text className="mt-1.5 text-base font-bold text-[#111827]">Available to Deposit</Text>
 

@@ -15,6 +15,9 @@ export interface Reserve {
   usageAsCollateralEnabled: boolean;
   reserveInterestRateStrategy: string;
   isDropped: boolean;
+  bToken: {
+    id: string;
+  }
 }
 
 interface ReserveHistoryEntry {
@@ -48,6 +51,9 @@ const RESERVES_QUERY = gql`
       usageAsCollateralEnabled
       reserveInterestRateStrategy
       isDropped
+      bToken {
+        id
+      }
     }
   }
 `;
@@ -149,5 +155,4 @@ export async function fetchReserveAprHistory(options: {
     })
     .reverse();
 }
-
 
