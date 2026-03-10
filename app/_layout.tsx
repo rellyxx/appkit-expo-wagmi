@@ -1,5 +1,5 @@
-import 'text-encoding';
 import "@walletconnect/react-native-compat";
+import 'text-encoding';
 import '../global.css';
 import {
   AppKit,
