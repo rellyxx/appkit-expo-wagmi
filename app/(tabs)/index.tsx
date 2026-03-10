@@ -260,7 +260,7 @@ export default function HomeScreen() {
           >
             <View style={{ width: pageWidth }} className="gap-4">
               <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-bold text-[#111827]">My Deposits</Text>
+                <Text className="text-lg font-bold text-[#111827]">Your supplies</Text>
                 <Text className="text-xs font-semibold text-[#9CA3AF]">APY (%)</Text>
               </View>
 
@@ -288,8 +288,10 @@ export default function HomeScreen() {
                 ))
               )}
 
-              <Text className="mt-1.5 text-base font-bold text-[#111827]">Available to Deposit</Text>
-
+              <View className="flex-row items-center justify-between">
+                <Text className="text-lg font-bold text-[#111827]">Assets to supply</Text>
+                <Text className="text-xs font-semibold text-[#9CA3AF]">APY (%)</Text>
+              </View>
               {availableToDeposit.map((item) => (
                 <View key={item.symbol} className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-md">
                   <View className="flex-row items-center gap-3">
