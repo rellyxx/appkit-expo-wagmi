@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { Text, View, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppKitButton } from '@reown/appkit-react-native';
 
@@ -18,11 +18,15 @@ export function DashboardHeader({ title }: Props) {
       style={{ paddingTop: insets.top + 12 }}
     >
       <View className="flex-row items-center justify-between">
-        <View className="flex-row items-center gap-2.5">
-          <View className="h-9 w-9 rounded-[10px] bg-[#E7EEFF] items-center justify-center">
-            <View className="h-4 w-4 rounded bg-transparent border-2 border-[#2F6DF6]" />
+        <View className="flex-row items-center gap-1">
+          <View className="h-9 w-9 items-center justify-center">
+             <Image
+                source={require('@/assets/images/logo.png')}
+                className="h-10"
+                resizeMode="contain"
+              />
           </View>
-          <Text className="text-lg font-bold text-[#111827]">{title}</Text>
+          <Text className="text-xl font-bold text-black">OpenFi</Text>
         </View>
         <AppKitButton
           label="Connect Wallet"
