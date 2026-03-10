@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { DEFAULT_GRAPH_URL, fetchReservesAction, getGraphUrlByChainId, type Reserve } from '@/services/graph/fetch';
+import { DEFAULT_CHAINID } from '@/services/graph/client';
 
 export interface GlobalState {
   reserves: Reserve[];
@@ -9,16 +10,16 @@ export interface GlobalState {
   graphUrl: string;
   setChainId: (chainId: number) => void;
   setGraphUrl: (url: string) => void;
-  fetchReserves: (chainId?: number) => Promise<void>;
+  fetchReserves: () => Promise<void>;
 }
 
 export const useGlobalState = create<GlobalState>((set, get) => ({
   reserves: [],
   isLoading: false,
   error: null,
-  chainId: 97,
+  chainId: DEFAULT_CHAINID,
   graphUrl: DEFAULT_GRAPH_URL,
-  setChainId: (chainId = 97) => {
+  setChainId: (chainId = DEFAULT_CHAINID) => {
     if (typeof chainId === 'number') {
       set({ chainId, graphUrl: getGraphUrlByChainId(chainId) });
       return;

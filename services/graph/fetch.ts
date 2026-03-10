@@ -1,6 +1,6 @@
 import { gql } from '@apollo/client';
 import { formatUnits } from 'viem';
-import { createGraphClient, GRAPH_ENDPOINTS } from '@/services/graph/client';
+import { createGraphClient, DEFAULT_CHAINID, GRAPH_ENDPOINTS } from '@/services/graph/client';
 import type { StoreApi } from 'zustand';
 import type { GlobalState } from '@/store/useGlobalState';
 
@@ -73,7 +73,7 @@ const RESERVES_HISTORY_QUERY = gql`
 `;
 
 
-export const DEFAULT_GRAPH_URL = GRAPH_ENDPOINTS[97];
+export const DEFAULT_GRAPH_URL = GRAPH_ENDPOINTS[DEFAULT_CHAINID];
 
 export function getGraphUrlByChainId(chainId: number) {
   return GRAPH_ENDPOINTS[chainId] ?? DEFAULT_GRAPH_URL;

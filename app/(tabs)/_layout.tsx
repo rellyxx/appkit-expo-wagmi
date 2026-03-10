@@ -6,16 +6,16 @@ import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { themeColor } from '@/constants/Colors';
-import { useAccount } from 'wagmi';
+import { useChainId } from 'wagmi';
 import { useGlobalState } from '@/store/useGlobalState';
 export default function TabLayout() {
-  const {chainId} = useAccount();
+  const chainId = useChainId();
   const { fetchReserves, setChainId } = useGlobalState();
   useEffect(() => {
     if (typeof chainId === 'number') {
       setChainId(chainId);
     }
-    fetchReserves(chainId); 
+    fetchReserves(); 
   }, [chainId, fetchReserves, setChainId]);
   return (
     <Tabs
