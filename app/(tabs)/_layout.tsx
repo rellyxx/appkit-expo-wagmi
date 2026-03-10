@@ -1,12 +1,19 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
 
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { themeColor } from '@/constants/Colors';
+import { useAccount } from 'wagmi';
+import { useGlobalState } from '@/store/useGlobalState';
 export default function TabLayout() {
+  const {chainId} = useAccount();
+  const { fetchReserves } = useGlobalState();
+  useEffect(() => {
+    fetchReserves(chainId); 
+  }, [chainId, fetchReserves]);
   return (
     <Tabs
       screenOptions={{

@@ -4,6 +4,7 @@ import { View, Text, Pressable, ScrollView, useWindowDimensions, PanResponder } 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DashboardHeader, DASHBOARD_HEADER_HEIGHT } from '@/components/DashboardHeader';
 import { themeColor } from '@/constants/Colors';
+import { useGlobalState } from '@/store/useGlobalState';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -12,6 +13,7 @@ export default function HomeScreen() {
   const [contentWidth, setContentWidth] = React.useState(0);
   const scrollRef = React.useRef<ScrollView>(null);
   const swipeHandledRef = React.useRef(false);
+  const reserves = useGlobalState((state) => state.reserves);
 
   const deposits = [
     {
@@ -56,20 +58,35 @@ export default function HomeScreen() {
     },
   ];
 
-  const availableToDeposit = [
-    {
-      symbol: 'USDC',
-      amount: 'Wallet: 1,240.50 USDC',
-      color: '#3B82F6',
-      icon: '$',
-    },
-    {
-      symbol: 'WETH',
-      amount: 'Wallet: 1.24 WETH',
-      color: '#A855F7',
-      icon: 'Ξ',
-    },
-  ];
+  const tokenColors: Record<string, string> = {
+    USDC: '#3B82F6',
+    USDT: '#14B8A6',
+    WETH: '#A855F7',
+    ETH: '#A855F7',
+    BNB: '#F59E0B',
+    BTC: '#F97316',
+    WBTC: '#F97316',
+  };
+
+  const tokenIcons: Record<string, string> = {
+    USDC: '$',
+    USDT: '$',
+    WETH: 'Ξ',
+    ETH: 'Ξ',
+    BNB: '◎',
+    BTC: '₿',
+    WBTC: '₿',
+  };
+
+  const availableToDeposit = reserves
+    .filter((reserve) => !reserve.isDropped)
+    .map((reserve) => ({
+      symbol: reserve.symbol,
+      name: reserve.name,
+      amount: `Wallet: -- ${reserve.symbol}`,
+      color: tokenColors[reserve.symbol] ?? themeColor,
+      icon: tokenIcons[reserve.symbol] ?? reserve.symbol.slice(0, 1),
+    }));
 
   const borrows = [
     {
