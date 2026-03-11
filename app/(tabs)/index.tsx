@@ -50,7 +50,6 @@ export default function HomeScreen() {
     () => reserves.filter((reserve) => !reserve.isDropped),
     [reserves],
   );
-  console.log('activeReserves', activeReserves);
 
   const balanceContracts = React.useMemo(
     () =>

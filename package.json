@@ -5,14 +5,17 @@
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
     "eas:android": "eas build -p android --profile production",
     "eas:ios": "eas build -p ios --profile production",
     "eas:dev:android": "eas build -p android --profile development",
-    "eas:dev:ios": "eas build -p ios --profile development"
+    "eas:dev:ios": "eas build -p ios --profile development",
+    "android:release": "cd android && ./gradlew assembleRelease"
+    ,
+    "android:debug": "cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
     "@apollo/client": "^4.1.6",
