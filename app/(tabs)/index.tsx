@@ -6,10 +6,11 @@ import { DashboardHeader, DASHBOARD_HEADER_HEIGHT } from '@/components/Dashboard
 import { themeColor } from '@/constants/Colors';
 import { useGlobalState } from '@/store/useGlobalState';
 import { useAccount, useReadContracts } from 'wagmi';
-import { erc20Abi, formatUnits } from 'viem';
+import { erc20Abi, formatUnits, type Abi } from 'viem';
 import BigNumberJs from 'bignumber.js';
 import { BorrowTab } from './BorrowTab';
 import { SupplyTab } from './SupplyTab';
+import deployedContracts from '@/contracts/deployedContracts';
 
 type SortDirection = 'asc' | 'desc';
 
@@ -22,6 +23,18 @@ export default function HomeScreen() {
   const swipeHandledRef = React.useRef(false);
   const reserves = useGlobalState((state) => state.reserves);
   const { address, chainId } = useAccount();
+  const deployedByChain =
+    deployedContracts as Record<number, (typeof deployedContracts)[keyof typeof deployedContracts]>;
+  const poolDataProvider = React.useMemo(
+    () => (chainId ? deployedByChain[chainId]?.PoolDataProvider : undefined),
+    [chainId, deployedByChain],
+  );
+  const poolDataProviderAbi = poolDataProvider?.abi as Abi | undefined;
+  const poolProxy = React.useMemo(
+    () => (chainId ? deployedByChain[chainId]?.PoolProxy : undefined),
+    [chainId, deployedByChain],
+  );
+  const poolProxyAbi = poolProxy?.abi as Abi | undefined;
 
   const tokenColors: Record<string, string> = {
     USDC: '#3B82F6',
@@ -31,16 +44,6 @@ export default function HomeScreen() {
     BNB: '#F59E0B',
     BTC: '#F97316',
     WBTC: '#F97316',
-  };
-
-  const tokenIcons: Record<string, string> = {
-    USDC: '$',
-    USDT: '$',
-    WETH: 'Ξ',
-    ETH: 'Ξ',
-    BNB: '◎',
-    BTC: '₿',
-    WBTC: '₿',
   };
 
   const activeReserves = React.useMemo(
@@ -87,6 +90,84 @@ export default function HomeScreen() {
     query: { enabled: supplyBalanceContracts.length > 0 },
   });
 
+  const userReserveContracts = React.useMemo(
+    () =>
+      address && poolDataProvider?.address && poolDataProviderAbi
+        ? activeReserves.map((reserve) => ({
+            address: poolDataProvider.address as `0x${string}`,
+            abi: poolDataProviderAbi,
+            functionName: 'getUserReserveData' as const,
+            args: [reserve.underlyingAsset as `0x${string}`, address] as const,
+            chainId,
+          }))
+        : [],
+    [activeReserves, address, chainId, poolDataProvider?.address, poolDataProviderAbi],
+  );
+
+  const { data: userReserveResults } = useReadContracts({
+    contracts: userReserveContracts,
+    query: { enabled: userReserveContracts.length > 0 },
+  });
+
+  const reserveConfigContracts = React.useMemo(
+    () =>
+      poolDataProvider?.address && poolDataProviderAbi
+        ? activeReserves.map((reserve) => ({
+            address: poolDataProvider.address as `0x${string}`,
+            abi: poolDataProviderAbi,
+            functionName: 'getReserveConfigurationData' as const,
+            args: [reserve.underlyingAsset as `0x${string}`] as const,
+            chainId,
+          }))
+        : [],
+    [activeReserves, chainId, poolDataProvider?.address, poolDataProviderAbi],
+  );
+
+  const { data: reserveConfigResults } = useReadContracts({
+    contracts: reserveConfigContracts,
+    query: { enabled: reserveConfigContracts.length > 0 },
+  });
+
+  const reserveDataContracts = React.useMemo(
+    () =>
+      poolDataProvider?.address && poolDataProviderAbi
+        ? activeReserves.map((reserve) => ({
+            address: poolDataProvider.address as `0x${string}`,
+            abi: poolDataProviderAbi,
+            functionName: 'getReserveData' as const,
+            args: [reserve.underlyingAsset as `0x${string}`] as const,
+            chainId,
+          }))
+        : [],
+    [activeReserves, chainId, poolDataProvider?.address, poolDataProviderAbi],
+  );
+
+  const { data: reserveDataResults } = useReadContracts({
+    contracts: reserveDataContracts,
+    query: { enabled: reserveDataContracts.length > 0 },
+  });
+
+  const userAccountContracts = React.useMemo(
+    () =>
+      address && poolProxy?.address && poolProxyAbi
+        ? [
+            {
+              address: poolProxy.address as `0x${string}`,
+              abi: poolProxyAbi,
+              functionName: 'getUserAccountData' as const,
+              args: [address] as const,
+              chainId,
+            },
+          ]
+        : [],
+    [address, chainId, poolProxy?.address, poolProxyAbi],
+  );
+
+  const { data: userAccountResults } = useReadContracts({
+    contracts: userAccountContracts,
+    query: { enabled: userAccountContracts.length > 0 },
+  });
+
   const balancesBySymbol = React.useMemo(() => {
     const map = new Map<string, string>();
     activeReserves.forEach((reserve, index) => {
@@ -121,8 +202,30 @@ export default function HomeScreen() {
     return value.toFormat(2);
   };
 
+  const getPriceInEth = (priceInEth?: string) => {
+    if (!priceInEth) return null;
+    try {
+      return priceInEth.includes('.')
+        ? new BigNumberJs(priceInEth)
+        : new BigNumberJs(formatUnits(BigInt(priceInEth), 8));
+    } catch {
+      return null;
+    }
+  };
+
+  const formatDisplayAmount = (value: string) => {
+    const parsedAmount = Number(value);
+    if (!Number.isFinite(parsedAmount)) return value;
+    return parsedAmount.toLocaleString(undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: parsedAmount >= 1 ? 4 : 8,
+    });
+  };
+
   const [apySortDirection, setApySortDirection] = React.useState<SortDirection>('desc');
   const [depositApySortDirection, setDepositApySortDirection] = React.useState<SortDirection>('desc');
+  const [borrowAprSortDirection, setBorrowAprSortDirection] = React.useState<SortDirection>('desc');
+  const [availableBorrowAprSortDirection, setAvailableBorrowAprSortDirection] = React.useState<SortDirection>('desc');
 
   const availableToDeposit = activeReserves.map((reserve) => {
     const balance = balancesBySymbol.get(reserve.symbol);
@@ -130,10 +233,9 @@ export default function HomeScreen() {
       liquidityRate: reserve.liquidityRate?.toString() ?? '0',
       symbol: reserve.symbol,
       name: reserve.name,
-      amount: balance ? `${balance}` : `0`,
+      amount: balance ? formatDisplayAmount(balance) : '0',
       value: getUsdValue(balance, reserve.price?.priceInEth),
       color: tokenColors[reserve.symbol] ?? themeColor,
-      icon: tokenIcons[reserve.symbol] ?? reserve.symbol.slice(0, 1),
     };
   });
 
@@ -158,6 +260,50 @@ export default function HomeScreen() {
     return items;
   }, [availableToDeposit, apySortDirection]);
 
+  const getBorrowDebt = (result: unknown) => {
+    if (!Array.isArray(result)) return 0n;
+    const stableDebt = result[1];
+    const variableDebt = result[2];
+    if (typeof stableDebt !== 'bigint' || typeof variableDebt !== 'bigint') return 0n;
+    return stableDebt + variableDebt;
+  };
+
+  const getReserveConfigFlags = (result: unknown) => {
+    if (!Array.isArray(result)) return null;
+    const borrowingEnabled = result[6];
+    const isActive = result[8];
+    const isFrozen = result[9];
+    if (typeof borrowingEnabled !== 'boolean' || typeof isActive !== 'boolean' || typeof isFrozen !== 'boolean') {
+      return null;
+    }
+    return { borrowingEnabled, isActive, isFrozen };
+  };
+
+  const getAvailableLiquidity = (result: unknown) => {
+    if (!Array.isArray(result)) return 0n;
+    const totalBToken = result[2];
+    const totalStableDebt = result[3];
+    const totalVariableDebt = result[4];
+    if (
+      typeof totalBToken !== 'bigint' ||
+      typeof totalStableDebt !== 'bigint' ||
+      typeof totalVariableDebt !== 'bigint'
+    ) {
+      return 0n;
+    }
+    const available = totalBToken - totalStableDebt - totalVariableDebt;
+    return available > 0n ? available : 0n;
+  };
+
+  const availableBorrowBase = React.useMemo(() => {
+    const result = userAccountResults?.[0];
+    if (result?.status !== 'success' || !Array.isArray(result.result)) {
+      return 0n;
+    }
+    const availableBorrowsBase = result.result[2];
+    return typeof availableBorrowsBase === 'bigint' ? availableBorrowsBase : 0n;
+  }, [userAccountResults]);
+
   const deposits = activeReserves
     .map((reserve, index) => {
       const result = supplyBalanceResults?.[index];
@@ -166,13 +312,7 @@ export default function HomeScreen() {
       }
       const decimals = Number(reserve.decimals ?? 18);
       const tokenAmount = formatUnits(result.result, decimals);
-      const parsedAmount = Number(tokenAmount);
-      const displayAmount = Number.isFinite(parsedAmount)
-        ? parsedAmount.toLocaleString(undefined, {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: parsedAmount >= 1 ? 4 : 8,
-          })
-        : tokenAmount;
+      const displayAmount = formatDisplayAmount(tokenAmount);
       const supplyApy = Number(formatUnits(BigInt(reserve.liquidityRate ?? '0'), 27)) * 100;
       return {
         symbol: reserve.symbol,
@@ -181,7 +321,6 @@ export default function HomeScreen() {
         liquidityRate: reserve.liquidityRate?.toString() ?? '0',
         apyValue: supplyApy,
         color: tokenColors[reserve.symbol] ?? themeColor,
-        icon: tokenIcons[reserve.symbol] ?? reserve.symbol.slice(0, 1),
       };
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);
@@ -198,39 +337,84 @@ export default function HomeScreen() {
     return items;
   }, [deposits, depositApySortDirection]);
 
-  const borrows = [
-    {
-      symbol: 'USDT',
-      amount: '150.00 USDT',
-      apr: '6.1%',
-      value: '$150.00',
-      color: '#F97316',
-      icon: '$',
-    },
-    {
-      symbol: 'WBTC',
-      amount: '0.08 WBTC',
-      apr: '5.4%',
-      value: '$520.00',
-      color: '#F59E0B',
-      icon: '₿',
-    },
-  ];
+  const availableToBorrow = activeReserves
+    .map((reserve, index) => {
+      const configResult = reserveConfigResults?.[index];
+      const flags = configResult?.status === 'success' ? getReserveConfigFlags(configResult.result) : null;
+      if (flags && (!flags.borrowingEnabled || !flags.isActive || flags.isFrozen)) {
+        return null;
+      }
+      const reserveDataResult = reserveDataResults?.[index];
+      const availableLiquidity =
+        reserveDataResult?.status === 'success' ? getAvailableLiquidity(reserveDataResult.result) : 0n;
+      const decimals = Number(reserve.decimals ?? 18);
+      const liquidityAmount = new BigNumberJs(formatUnits(availableLiquidity, decimals));
+      const availableBorrowBaseAmount = new BigNumberJs(formatUnits(availableBorrowBase, 8));
+      const priceInEth = getPriceInEth(reserve.price?.priceInEth);
+      const availableByUser = priceInEth && priceInEth.gt(0)
+        ? availableBorrowBaseAmount.div(priceInEth)
+        : new BigNumberJs(0);
+      const maxBorrowAmount = BigNumberJs.min(availableByUser, liquidityAmount);
+      const amountString = maxBorrowAmount.isFinite()
+        ? maxBorrowAmount.toFixed(8, BigNumberJs.ROUND_DOWN)
+        : '0';
+      const displayAmount = formatDisplayAmount(amountString);
+      const borrowApr = Number(formatUnits(BigInt(reserve.variableBorrowRate ?? '0'), 27)) * 100;
+      return {
+        symbol: reserve.symbol,
+        amount: displayAmount,
+        value: getUsdValue(displayAmount, reserve.price?.priceInEth),
+        apr: `${borrowApr.toFixed(2)}%`,
+        aprValue: borrowApr,
+        color: tokenColors[reserve.symbol] ?? themeColor,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
 
-  const availableToBorrow = [
-    {
-      symbol: 'USDC',
-      amount: 'Borrow limit: 2,400.00 USDC',
-      color: '#3B82F6',
-      icon: '$',
-    },
-    {
-      symbol: 'WETH',
-      amount: 'Borrow limit: 0.90 WETH',
-      color: '#A855F7',
-      icon: 'Ξ',
-    },
-  ];
+  const sortedAvailableToBorrow = React.useMemo(() => {
+    const items = [...availableToBorrow];
+    items.sort((a, b) => {
+      if (a.aprValue === b.aprValue) return 0;
+      if (availableBorrowAprSortDirection === 'asc') {
+        return a.aprValue < b.aprValue ? -1 : 1;
+      }
+      return a.aprValue > b.aprValue ? -1 : 1;
+    });
+    return items;
+  }, [availableToBorrow, availableBorrowAprSortDirection]);
+
+  const borrows = activeReserves
+    .map((reserve, index) => {
+      const result = userReserveResults?.[index];
+      if (result?.status !== 'success') return null;
+      const debt = getBorrowDebt(result.result);
+      if (debt <= 0n) return null;
+      const decimals = Number(reserve.decimals ?? 18);
+      const tokenAmount = formatUnits(debt, decimals);
+      const displayAmount = formatDisplayAmount(tokenAmount);
+      const borrowApr = Number(formatUnits(BigInt(reserve.variableBorrowRate ?? '0'), 27)) * 100;
+      return {
+        symbol: reserve.symbol,
+        amount: displayAmount,
+        value: getUsdValue(displayAmount, reserve.price?.priceInEth),
+        apr: `${borrowApr.toFixed(2)}%`,
+        aprValue: borrowApr,
+        color: tokenColors[reserve.symbol] ?? themeColor,
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
+
+  const sortedBorrows = React.useMemo(() => {
+    const items = [...borrows];
+    items.sort((a, b) => {
+      if (a.aprValue === b.aprValue) return 0;
+      if (borrowAprSortDirection === 'asc') {
+        return a.aprValue < b.aprValue ? -1 : 1;
+      }
+      return a.aprValue > b.aprValue ? -1 : 1;
+    });
+    return items;
+  }, [borrows, borrowAprSortDirection]);
 
   const pageWidth = contentWidth || Math.max(windowWidth - 40, 0);
 
@@ -337,7 +521,17 @@ export default function HomeScreen() {
             </View>
 
             <View style={{ width: pageWidth }}>
-              <BorrowTab borrows={borrows} availableToBorrow={availableToBorrow} themeColor={themeColor} />
+              <BorrowTab
+                borrows={sortedBorrows}
+                availableToBorrow={sortedAvailableToBorrow}
+                onToggleBorrowAprSort={() =>
+                  setBorrowAprSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+                }
+                onToggleAvailableBorrowAprSort={() =>
+                  setAvailableBorrowAprSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+                }
+                themeColor={themeColor}
+              />
             </View>
           </ScrollView>
         </View>

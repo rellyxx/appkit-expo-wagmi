@@ -9,7 +9,6 @@ type SupplyItem = {
   amount: string;
   value: string;
   color: string;
-  icon: string;
   liquidityRate: string;
 };
 
