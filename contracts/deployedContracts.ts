@@ -1,7 +1,6 @@
 
 import poolABI from './poolABI.json';
 import faucetABI from './faucetABI.json';
-import IBTokenABI from './IBTokenABI.json';
 import ProtocolOracleABI from './ProtocolOracleABI.json';
 import PoolDataProviderABI from './PoolDataProviderABI.json';
 import WrappedTokenGatewayV3ABI from './WrappedTokenGatewayV3ABI.json';
@@ -12,7 +11,7 @@ export const borrowDisabledAssets:string[] = [];
 
 const deployedContracts = {
     688689: {
-        Pool: {
+        PoolProxy: {
             address: '0xEC86f142E7334d99EEEF2c43298413299D919B30',
             abi: poolABI,
         },
@@ -38,7 +37,7 @@ const deployedContracts = {
         }
     },
     56: {
-        Pool: {
+        PoolProxy: {
             address: '0xc6EC0E8FCbCC566628ef5812aca7C6Db04b4d132',
             abi: poolABI,
         },
@@ -56,7 +55,7 @@ const deployedContracts = {
         }
     },
     97: {
-        Pool: {
+        PoolProxy: {
             address: '0x41bF429765052861B6385a1319b9480E4f74c7EB', // Pool Proxy
             abi: poolABI,
         },
@@ -78,7 +77,7 @@ const deployedContracts = {
         },
     },
     5003: {
-        Pool: {
+        PoolProxy: {
             address: '0x2112d1E06284665f88e0Ef3a338D52AcA7EfCf26', // Pool Proxy
             abi: poolABI,
         },
