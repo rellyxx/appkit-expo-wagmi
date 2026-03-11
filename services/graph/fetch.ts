@@ -15,6 +15,8 @@ export interface Reserve {
   usageAsCollateralEnabled: boolean;
   reserveInterestRateStrategy: string;
   isDropped: boolean;
+  stableBorrowRate: string;
+  variableBorrowRate: string;
   bToken: {
     id: string;
   }
@@ -48,6 +50,8 @@ const RESERVES_QUERY = gql`
       name
       underlyingAsset
       liquidityRate
+      variableBorrowRate
+      stableBorrowRate
       usageAsCollateralEnabled
       reserveInterestRateStrategy
       isDropped

@@ -7,6 +7,8 @@ import { themeColor } from '@/constants/Colors';
 import { useGlobalState } from '@/store/useGlobalState';
 import { useAccount, useReadContracts } from 'wagmi';
 import { erc20Abi, formatUnits } from 'viem';
+import { formatAPY } from '@/utils/common';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -94,16 +96,41 @@ export default function HomeScreen() {
     return map;
   }, [activeReserves, balanceResults]);
 
+  const [apySortDirection, setApySortDirection] = React.useState<'asc' | 'desc'>('desc');
+  const [depositApySortDirection, setDepositApySortDirection] = React.useState<'asc' | 'desc'>('desc');
+
   const availableToDeposit = activeReserves.map((reserve) => {
     const balance = balancesBySymbol.get(reserve.symbol);
     return {
+      liquidityRate: reserve.liquidityRate,
       symbol: reserve.symbol,
       name: reserve.name,
-      amount: balance ? `${balance} ${reserve.symbol}` : `-- ${reserve.symbol}`,
+      amount: balance ? `${balance} ${reserve.symbol}` : `0 ${reserve.symbol}`,
       color: tokenColors[reserve.symbol] ?? themeColor,
       icon: tokenIcons[reserve.symbol] ?? reserve.symbol.slice(0, 1),
     };
   });
+
+  const getLiquidityRate = (value: unknown) => {
+    if (typeof value === 'bigint') return value;
+    if (typeof value === 'number') return BigInt(Math.floor(value));
+    if (typeof value === 'string' && value.length > 0) return BigInt(value);
+    return 0n;
+  };
+
+  const sortedAvailableToDeposit = React.useMemo(() => {
+    const items = [...availableToDeposit];
+    items.sort((a, b) => {
+      const aRate = getLiquidityRate(a.liquidityRate);
+      const bRate = getLiquidityRate(b.liquidityRate);
+      if (aRate === bRate) return 0;
+      if (apySortDirection === 'asc') {
+        return aRate < bRate ? -1 : 1;
+      }
+      return aRate > bRate ? -1 : 1;
+    });
+    return items;
+  }, [availableToDeposit, apySortDirection]);
 
   const deposits = activeReserves
     .map((reserve, index) => {
@@ -125,12 +152,24 @@ export default function HomeScreen() {
         symbol: reserve.symbol,
         amount: `${displayAmount} ${reserve.symbol}`,
         apy: `${supplyApy.toFixed(2)}%`,
-        value: '--',
+        apyValue: supplyApy,
         color: tokenColors[reserve.symbol] ?? themeColor,
         icon: tokenIcons[reserve.symbol] ?? reserve.symbol.slice(0, 1),
       };
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);
+
+  const sortedDeposits = React.useMemo(() => {
+    const items = [...deposits];
+    items.sort((a, b) => {
+      if (a.apyValue === b.apyValue) return 0;
+      if (depositApySortDirection === 'asc') {
+        return a.apyValue < b.apyValue ? -1 : 1;
+      }
+      return a.apyValue > b.apyValue ? -1 : 1;
+    });
+    return items;
+  }, [deposits, depositApySortDirection]);
 
   const borrows = [
     {
@@ -261,15 +300,45 @@ export default function HomeScreen() {
             <View style={{ width: pageWidth }} className="gap-4">
               <View className="flex-row items-center justify-between">
                 <Text className="text-lg font-bold text-[#111827]">Your supplies</Text>
-                <Text className="text-xs font-semibold text-[#9CA3AF]">APY (%)</Text>
+                <Pressable
+                  className="flex-row items-center gap-1 rounded px-2 py-1 h-10"
+                  onPress={() =>
+                    setDepositApySortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+                  }
+                  style={({ pressed }) => [
+                    pressed
+                      ? {
+                          opacity: 0.75,
+                          transform: [{ scale: 0.94 }],
+                          backgroundColor: 'rgba(17,24,39,0.1)',
+                        }
+                      : null,
+                  ]}
+                >
+                  {({ pressed }) => (
+                    <>
+                      <Text
+                        className="text-xs font-semibold"
+                        style={{ color: pressed ? themeColor : '#9CA3AF' }}
+                      >
+                        APY (%)
+                      </Text>
+                      <FontAwesome
+                        name="sort"
+                        size={12}
+                        color={pressed ? themeColor : '#9CA3AF'}
+                      />
+                    </>
+                  )}
+                </Pressable>
               </View>
 
-              {deposits.length === 0 ? (
+              {sortedDeposits.length === 0 ? (
                 <View className="bg-white rounded-2xl p-4 shadow-md">
                   <Text className="text-[13px] text-[#6B7280]">No supplied assets yet</Text>
                 </View>
               ) : (
-                deposits.map((item) => (
+                sortedDeposits.map((item) => (
                   <View key={item.symbol} className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-md">
                     <View className="flex-row items-center gap-3">
                       <View className="h-11 w-11 rounded-full items-center justify-center" style={{ backgroundColor: `${item.color}22` }}>
@@ -282,7 +351,6 @@ export default function HomeScreen() {
                     </View>
                     <View className="items-end gap-1">
                       <Text className="text-sm font-bold text-[#16A34A]">{item.apy}</Text>
-                      <Text className="text-[13px] text-[#6B7280]">{item.value}</Text>
                     </View>
                   </View>
                 ))
@@ -290,9 +358,39 @@ export default function HomeScreen() {
 
               <View className="flex-row items-center justify-between">
                 <Text className="text-lg font-bold text-[#111827]">Assets to supply</Text>
-                <Text className="text-xs font-semibold text-[#9CA3AF]">APY (%)</Text>
+                <Pressable
+                  className="flex-row items-center gap-1 rounded px-2 py-1 h-10"
+                  onPress={() =>
+                    setApySortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+                  }
+                  style={({ pressed }) => [
+                    pressed
+                      ? {
+                          opacity: 0.75,
+                          transform: [{ scale: 0.94 }],
+                          backgroundColor: 'rgba(17,24,39,0.1)',
+                        }
+                      : null,
+                  ]}
+                >
+                  {({ pressed }) => (
+                    <>
+                      <Text
+                        className="text-xs font-semibold"
+                        style={{ color: pressed ? themeColor : '#9CA3AF' }}
+                      >
+                        APY (%)
+                      </Text>
+                      <FontAwesome
+                        name="sort"
+                        size={12}
+                        color={pressed ? themeColor : '#9CA3AF'}
+                      />
+                    </>
+                  )}
+                </Pressable>
               </View>
-              {availableToDeposit.map((item) => (
+              {sortedAvailableToDeposit.map((item) => (
                 <View key={item.symbol} className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-md">
                   <View className="flex-row items-center gap-3">
                     <View className="h-11 w-11 rounded-full items-center justify-center" style={{ backgroundColor: `${item.color}22` }}>
@@ -300,12 +398,10 @@ export default function HomeScreen() {
                     </View>
                     <View>
                       <Text className="text-base font-bold text-[#111827]">{item.symbol}</Text>
-                      <Text className="text-[13px] text-[#6B7280] mt-0.5">{item.amount}</Text>
+                      <Text className="text-[13px] text-[#6B7280] mt-0.5">balance: {item.amount}</Text>
                     </View>
                   </View>
-                  <Pressable className="px-4 py-2 rounded-xl" style={{ backgroundColor: themeColor }}>
-                    <Text className="text-[13px] font-bold text-white">Deposit</Text>
-                  </Pressable>
+                  <Text className="text-sm font-bold text-[#16A34A]">{formatAPY(item.liquidityRate)}</Text>
                 </View>
               ))}
             </View>
