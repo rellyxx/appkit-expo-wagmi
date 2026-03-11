@@ -19,6 +19,9 @@ export interface Reserve {
   variableBorrowRate: string;
   bToken: {
     id: string;
+  };
+  price: {
+    priceInEth: string;
   }
 }
 
@@ -57,6 +60,9 @@ const RESERVES_QUERY = gql`
       isDropped
       bToken {
         id
+      }
+      price {
+        priceInEth
       }
     }
   }

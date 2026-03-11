@@ -3,26 +3,18 @@ import { View, Text, Pressable } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { formatAPY } from '@/utils/common';
 
-type DepositItem = {
+type SupplyItem = {
   symbol: string;
   amount: string;
-  apy: string;
-  apyValue: number;
-  color: string;
-  icon: string;
-};
-
-type AvailableDepositItem = {
-  symbol: string;
-  amount: string;
+  value: string;
   color: string;
   icon: string;
   liquidityRate: string;
 };
 
 type SupplyTabProps = {
-  sortedDeposits: DepositItem[];
-  sortedAvailableToDeposit: AvailableDepositItem[];
+  sortedDeposits: SupplyItem[];
+  sortedAvailableToDeposit: SupplyItem[];
   onToggleDepositApySort: () => void;
   onToggleSupplyApySort: () => void;
   themeColor: string;
@@ -78,11 +70,16 @@ export function SupplyTab({
               </View>
               <View>
                 <Text className="text-base font-bold text-[#111827]">{item.symbol}</Text>
-                <Text className="text-[13px] text-[#6B7280] mt-0.5">{item.amount}</Text>
               </View>
             </View>
-            <View className="items-end gap-1">
-              <Text className="text-sm font-bold text-[#16A34A]">{item.apy}</Text>
+            <View className="flex-row gap-6 items-center">
+              <View className="flex items-end">
+                <Text className="text-[16px] font-bold text-[#353638] mt-0.5">{item.amount}</Text>
+                <Text className="text-[13px] text-[#6B7280] mt-0.5">${item.value}</Text>
+              </View>
+              <View className="bg-[#16A34A] rounded-full px-2 py-0.5 w-20 items-center justify-center">
+                <Text className="text-sm font-bold text-white">{formatAPY(item.liquidityRate)}</Text>
+              </View>
             </View>
           </View>
         ))
@@ -123,10 +120,20 @@ export function SupplyTab({
             </View>
             <View>
               <Text className="text-base font-bold text-[#111827]">{item.symbol}</Text>
-              <Text className="text-[13px] text-[#6B7280] mt-0.5">balance: {item.amount}</Text>
+            </View>
+           
+          </View>
+          <View className='flex-row gap-6 items-center'>
+            <View className='flex items-end'>
+              <Text className="text-[16px] font-bold text-[#353638] mt-0.5">{item.amount}</Text>
+              <Text className="text-[13px] text-[#6B7280] mt-0.5">${item.value}</Text>
+            </View>
+            <View className='bg-[#16A34A] rounded-full px-2 py-0.5 w-20 items-center justify-center'>
+                <Text className="text-sm font-bold text-white">{formatAPY(item.liquidityRate)}</Text>
             </View>
           </View>
-          <Text className="text-sm font-bold text-[#16A34A]">{formatAPY(item.liquidityRate)}</Text>
+
+         
         </View>
       ))}
     </View>

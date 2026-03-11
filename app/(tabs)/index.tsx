@@ -7,6 +7,7 @@ import { themeColor } from '@/constants/Colors';
 import { useGlobalState } from '@/store/useGlobalState';
 import { useAccount, useReadContracts } from 'wagmi';
 import { erc20Abi, formatUnits } from 'viem';
+import BigNumberJs from 'bignumber.js';
 import { BorrowTab } from './BorrowTab';
 import { SupplyTab } from './SupplyTab';
 
@@ -46,6 +47,7 @@ export default function HomeScreen() {
     () => reserves.filter((reserve) => !reserve.isDropped),
     [reserves],
   );
+  console.log('activeReserves', activeReserves);
 
   const balanceContracts = React.useMemo(
     () =>
@@ -98,6 +100,27 @@ export default function HomeScreen() {
     return map;
   }, [activeReserves, balanceResults]);
 
+  const getUsdValue = (balance: string | undefined, priceInEth?: string) => {
+    if (!priceInEth) return '0.00';
+    const normalizedBalance = (balance ?? '').replace(/,/g, '').trim();
+    if (!normalizedBalance) return '0.00';
+    const balanceNumber = new BigNumberJs(normalizedBalance);
+    if (!balanceNumber.isFinite()) return '0.00';
+    let priceNumber: BigNumberJs | null = null;
+    try {
+      priceNumber = priceInEth.includes('.')
+        ? new BigNumberJs(priceInEth)
+        : new BigNumberJs(formatUnits(BigInt(priceInEth), 8));
+    } catch {
+      priceNumber = null;
+    }
+    if (!priceNumber || !priceNumber.isFinite()) return '0.00';
+    const value = balanceNumber.times(priceNumber);
+    if (!value.isFinite() || value.isNaN()) return '0.00';
+    if (value.gt(0) && value.lt(0.01)) return '<0.01';
+    return value.toFormat(2);
+  };
+
   const [apySortDirection, setApySortDirection] = React.useState<SortDirection>('desc');
   const [depositApySortDirection, setDepositApySortDirection] = React.useState<SortDirection>('desc');
 
@@ -107,7 +130,8 @@ export default function HomeScreen() {
       liquidityRate: reserve.liquidityRate?.toString() ?? '0',
       symbol: reserve.symbol,
       name: reserve.name,
-      amount: balance ? `${balance} ${reserve.symbol}` : `0 ${reserve.symbol}`,
+      amount: balance ? `${balance}` : `0`,
+      value: getUsdValue(balance, reserve.price?.priceInEth),
       color: tokenColors[reserve.symbol] ?? themeColor,
       icon: tokenIcons[reserve.symbol] ?? reserve.symbol.slice(0, 1),
     };
@@ -152,8 +176,9 @@ export default function HomeScreen() {
       const supplyApy = Number(formatUnits(BigInt(reserve.liquidityRate ?? '0'), 27)) * 100;
       return {
         symbol: reserve.symbol,
-        amount: `${displayAmount} ${reserve.symbol}`,
-        apy: `${supplyApy.toFixed(2)}%`,
+        amount: `${displayAmount}`,
+        value: getUsdValue(displayAmount, reserve.price?.priceInEth),
+        liquidityRate: reserve.liquidityRate?.toString() ?? '0',
         apyValue: supplyApy,
         color: tokenColors[reserve.symbol] ?? themeColor,
         icon: tokenIcons[reserve.symbol] ?? reserve.symbol.slice(0, 1),
