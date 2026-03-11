@@ -1,0 +1,41 @@
+import { themeColor } from '@/constants/Colors';
+
+export const AppTheme = {
+  light: {
+    pageBg: '#F4F6FB',
+    cardBg: '#FFFFFF',
+    cardAltBg: '#F8FAFF',
+    border: '#E5E7EB',
+    textPrimary: '#111827',
+    textSecondary: '#6B7280',
+    textMuted: '#9CA3AF',
+    tabInactive: '#6B7280',
+    tabBarBg: '#FFFFFF',
+    headerBg: '#F4F6FB',
+    success: '#16A34A',
+    danger: '#DC2626',
+    cyan: '#22D3EE',
+    purple: '#A855F7',
+    lineGrid: '#E5E7EB',
+    accent: themeColor,
+  },
+  dark: {
+    pageBg: '#0F172A',
+    cardBg: '#111827',
+    cardAltBg: '#1E293B',
+    border: '#334155',
+    textPrimary: '#F8FAFC',
+    textSecondary: '#CBD5E1',
+    textMuted: '#94A3B8',
+    tabInactive: '#94A3B8',
+    tabBarBg: '#0F172A',
+    headerBg: '#0F172A',
+    success: '#22C55E',
+    danger: '#F87171',
+    cyan: '#22D3EE',
+    purple: '#C084FC',
+    lineGrid: '#334155',
+    accent: themeColor,
+  },
+} as const;
+

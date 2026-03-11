@@ -3,6 +3,7 @@ import { View, Text, Pressable } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { formatAPY } from '@/utils/common';
 import { TokenIcon } from '@/components/TokenIcon';
+import { AppTheme } from '@/constants/AppTheme';
 
 type SupplyItem = {
   symbol: string;
@@ -21,6 +22,7 @@ type SupplyTabProps = {
   onToggleSupplyBalanceSort: () => void;
   onTokenPress: (symbol: string) => void;
   themeColor: string;
+  isDark: boolean;
 };
 
 export function SupplyTab({
@@ -32,11 +34,13 @@ export function SupplyTab({
   onToggleSupplyBalanceSort,
   onTokenPress,
   themeColor,
+  isDark,
 }: SupplyTabProps) {
+  const colors = isDark ? AppTheme.dark : AppTheme.light;
   return (
     <View className="gap-4">
       <View className="flex-row items-end justify-between">
-        <Text className="text-lg font-bold text-[#111827]">Your supplies</Text>
+        <Text className="text-lg font-bold" style={{ color: colors.textPrimary }}>Your supplies</Text>
         <View className="flex-row items-end gap-6">
         <Pressable
           className="flex-row gap-1 items-end"
@@ -53,10 +57,10 @@ export function SupplyTab({
         >
           {({ pressed }) => (
             <>
-              <Text className="text-xs font-semibold" style={{ color: pressed ? themeColor : '#9CA3AF' }}>
+              <Text className="text-xs font-semibold" style={{ color: pressed ? themeColor : colors.textMuted }}>
                 Balance
               </Text>
-              <FontAwesome name="sort" size={12} color={pressed ? themeColor : '#9CA3AF'} />
+              <FontAwesome name="sort" size={12} color={pressed ? themeColor : colors.textMuted} />
             </>
           )}
         </Pressable>
@@ -75,10 +79,10 @@ export function SupplyTab({
         >
           {({ pressed }) => (
             <>
-              <Text className="text-xs font-semibold" style={{ color: pressed ? themeColor : '#9CA3AF' }}>
+              <Text className="text-xs font-semibold" style={{ color: pressed ? themeColor : colors.textMuted }}>
                 APY (%)
               </Text>
-              <FontAwesome name="sort" size={12} color={pressed ? themeColor : '#9CA3AF'} />
+              <FontAwesome name="sort" size={12} color={pressed ? themeColor : colors.textMuted} />
             </>
           )}
         </Pressable>
@@ -86,30 +90,31 @@ export function SupplyTab({
       </View>
 
       {sortedDeposits.length === 0 ? (
-        <View className="bg-white rounded-2xl p-4 shadow-md">
-          <Text className="text-[13px] text-[#6B7280]">No supplied assets yet</Text>
+        <View className="rounded-2xl p-4 shadow-md" style={{ backgroundColor: colors.cardBg }}>
+          <Text className="text-[13px]" style={{ color: colors.textSecondary }}>No supplied assets yet</Text>
         </View>
       ) : (
         sortedDeposits.map((item) => (
           <Pressable
             key={item.symbol}
             onPress={() => onTokenPress(item.symbol)}
-            className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-md"
+            className="rounded-2xl p-4 flex-row items-center justify-between shadow-md"
+            style={{ backgroundColor: colors.cardBg }}
           >
             <View className="flex-row items-center gap-3">
               <View className="h-11 w-11 rounded-full items-center justify-center" style={{ backgroundColor: `${item.color}22` }}>
                 <TokenIcon symbol={item.symbol} size={28} />
               </View>
               <View>
-                <Text className="text-base font-bold text-[#111827]">{item.symbol}</Text>
+                <Text className="text-base font-bold" style={{ color: colors.textPrimary }}>{item.symbol}</Text>
               </View>
             </View>
             <View className="flex-row gap-6 items-center">
               <View className="flex items-end">
-                <Text className="text-[16px] font-bold text-[#353638] mt-0.5">{item.amount}</Text>
-                <Text className="text-[13px] text-[#6B7280] mt-0.5">${item.value}</Text>
+                <Text className="text-[16px] font-bold mt-0.5" style={{ color: colors.textPrimary }}>{item.amount}</Text>
+                <Text className="text-[13px] mt-0.5" style={{ color: colors.textSecondary }}>${item.value}</Text>
               </View>
-              <View className="bg-[#16A34A] rounded-full px-2 py-0.5 w-20 items-center justify-center">
+              <View className="rounded-full px-2 py-0.5 w-20 items-center justify-center" style={{ backgroundColor: colors.success }}>
                 <Text className="text-sm font-bold text-white">{formatAPY(item.liquidityRate)}</Text>
               </View>
             </View>
@@ -118,7 +123,7 @@ export function SupplyTab({
       )}
 
       <View className="flex-row items-end justify-between">
-        <Text className="text-lg font-bold text-[#111827]">Assets to supply</Text>
+        <Text className="text-lg font-bold" style={{ color: colors.textPrimary }}>Assets to supply</Text>
         <View className="flex-row items-end gap-6">
         <Pressable
           className="flex-row gap-1 items-end"
@@ -135,10 +140,10 @@ export function SupplyTab({
         >
           {({ pressed }) => (
             <>
-              <Text className="text-xs font-semibold" style={{ color: pressed ? themeColor : '#9CA3AF' }}>
+              <Text className="text-xs font-semibold" style={{ color: pressed ? themeColor : colors.textMuted }}>
                 Wallet Balance
               </Text>
-              <FontAwesome name="sort" size={12} color={pressed ? themeColor : '#9CA3AF'} />
+              <FontAwesome name="sort" size={12} color={pressed ? themeColor : colors.textMuted} />
             </>
           )}
         </Pressable>
@@ -157,10 +162,10 @@ export function SupplyTab({
         >
           {({ pressed }) => (
             <>
-              <Text className="text-xs font-semibold" style={{ color: pressed ? themeColor : '#9CA3AF' }}>
+              <Text className="text-xs font-semibold" style={{ color: pressed ? themeColor : colors.textMuted }}>
                 APY (%)
               </Text>
-              <FontAwesome name="sort" size={12} color={pressed ? themeColor : '#9CA3AF'} />
+              <FontAwesome name="sort" size={12} color={pressed ? themeColor : colors.textMuted} />
             </>
           )}
         </Pressable>
@@ -171,23 +176,24 @@ export function SupplyTab({
         <Pressable
           key={item.symbol}
           onPress={() => onTokenPress(item.symbol)}
-          className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-md"
+          className="rounded-2xl p-4 flex-row items-center justify-between shadow-md"
+          style={{ backgroundColor: colors.cardBg }}
         >
           <View className="flex-row items-center gap-3">
             <View className="h-11 w-11 rounded-full items-center justify-center" style={{ backgroundColor: `${item.color}22` }}>
               <TokenIcon symbol={item.symbol} size={28} />
             </View>
             <View>
-              <Text className="text-base font-bold text-[#111827]">{item.symbol}</Text>
+              <Text className="text-base font-bold" style={{ color: colors.textPrimary }}>{item.symbol}</Text>
             </View>
            
           </View>
           <View className='flex-row gap-6 items-center'>
             <View className='flex items-end'>
-              <Text className="text-[16px] font-bold text-[#353638] mt-0.5">{item.amount}</Text>
-              <Text className="text-[13px] text-[#6B7280] mt-0.5">${item.value}</Text>
+              <Text className="text-[16px] font-bold mt-0.5" style={{ color: colors.textPrimary }}>{item.amount}</Text>
+              <Text className="text-[13px] mt-0.5" style={{ color: colors.textSecondary }}>${item.value}</Text>
             </View>
-            <View className='bg-[#16A34A] rounded-full px-2 py-0.5 w-20 items-center justify-center'>
+            <View className='rounded-full px-2 py-0.5 w-20 items-center justify-center' style={{ backgroundColor: colors.success }}>
                 <Text className="text-sm font-bold text-white">{formatAPY(item.liquidityRate)}</Text>
             </View>
           </View>

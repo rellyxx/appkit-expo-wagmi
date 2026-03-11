@@ -6,7 +6,9 @@ import { formatUnits } from 'viem';
 import Svg, { Circle, Line, Polyline } from 'react-native-svg';
 import { TokenIcon } from '@/components/TokenIcon';
 import { useGlobalState } from '@/store/useGlobalState';
+import { useAppearanceState } from '@/store/useAppearanceState';
 import { fetchReserveAprHistory, type ReserveAprPoint } from '@/services/graph/fetch';
+import { AppTheme } from '@/constants/AppTheme';
 
 function normalizeSymbol(symbol?: string | string[]) {
   if (Array.isArray(symbol)) return symbol[0] ?? '';
@@ -117,7 +119,8 @@ function formatShortDate(timestamp?: number) {
   return `${month}/${day}`;
 }
 
-function ProgressRing({ percent }: { percent: number }) {
+function ProgressRing({ percent, isDark }: { percent: number; isDark: boolean }) {
+  const colors = isDark ? AppTheme.dark : AppTheme.light;
   const size = 78;
   const strokeWidth = 8;
   const radius = (size - strokeWidth) / 2;
@@ -132,7 +135,7 @@ function ProgressRing({ percent }: { percent: number }) {
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#E5E7EB"
+          stroke={colors.border}
           strokeWidth={strokeWidth}
           fill="none"
         />
@@ -140,7 +143,7 @@ function ProgressRing({ percent }: { percent: number }) {
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#22C55E"
+          stroke={colors.success}
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeDasharray={`${circumference} ${circumference}`}
@@ -150,7 +153,7 @@ function ProgressRing({ percent }: { percent: number }) {
           origin={`${size / 2}, ${size / 2}`}
         />
       </Svg>
-      <Text className="text-sm font-bold text-[#111827] absolute">{normalized.toFixed(2)}%</Text>
+      <Text className="text-sm font-bold absolute" style={{ color: colors.textPrimary }}>{normalized.toFixed(2)}%</Text>
     </View>
   );
 }
@@ -160,27 +163,30 @@ function PlaceholderChart({
   avgLabel,
   points,
   xLabels,
+  isDark,
 }: {
   lineColor: string;
   avgLabel: string;
   points: string;
   xLabels: [string, string, string];
+  isDark: boolean;
 }) {
+  const colors = isDark ? AppTheme.dark : AppTheme.light;
   return (
-    <View className="mt-3 rounded-2xl bg-[#F8FAFC] border border-[#E5E7EB] px-3 py-2.5">
-      <View className="self-start bg-white rounded-full px-3 py-1 border border-[#E5E7EB]">
-        <Text className="text-sm font-semibold text-[#111827]">{avgLabel}</Text>
+    <View className="mt-3 rounded-2xl border px-3 py-2.5" style={{ backgroundColor: colors.cardAltBg, borderColor: colors.border }}>
+      <View className="self-start rounded-full px-3 py-1 border" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+        <Text className="text-sm font-semibold" style={{ color: colors.textPrimary }}>{avgLabel}</Text>
       </View>
       <Svg width="100%" height={124} viewBox="0 0 320 124">
-        <Line x1="0" y1="35" x2="320" y2="35" stroke="#E5E7EB" strokeWidth="1" strokeDasharray="4 4" />
-        <Line x1="0" y1="70" x2="320" y2="70" stroke="#E5E7EB" strokeWidth="1" strokeDasharray="4 4" />
-        <Line x1="0" y1="105" x2="320" y2="105" stroke="#E5E7EB" strokeWidth="1" strokeDasharray="4 4" />
+        <Line x1="0" y1="35" x2="320" y2="35" stroke={colors.lineGrid} strokeWidth="1" strokeDasharray="4 4" />
+        <Line x1="0" y1="70" x2="320" y2="70" stroke={colors.lineGrid} strokeWidth="1" strokeDasharray="4 4" />
+        <Line x1="0" y1="105" x2="320" y2="105" stroke={colors.lineGrid} strokeWidth="1" strokeDasharray="4 4" />
         <Polyline points={points} fill="none" stroke={lineColor} strokeWidth="3" strokeLinecap="round" />
       </Svg>
       <View className="flex-row justify-between px-1">
-        <Text className="text-xs text-[#6B7280]">{xLabels[0]}</Text>
-        <Text className="text-xs text-[#6B7280]">{xLabels[1]}</Text>
-        <Text className="text-xs text-[#6B7280]">{xLabels[2]}</Text>
+        <Text className="text-xs" style={{ color: colors.textSecondary }}>{xLabels[0]}</Text>
+        <Text className="text-xs" style={{ color: colors.textSecondary }}>{xLabels[1]}</Text>
+        <Text className="text-xs" style={{ color: colors.textSecondary }}>{xLabels[2]}</Text>
       </View>
     </View>
   );
@@ -191,6 +197,9 @@ export default function TokenDetailScreen() {
   const normalizedSymbol = normalizeSymbol(symbol);
   const reserves = useGlobalState((state) => state.reserves);
   const chainId = useGlobalState((state) => state.chainId);
+  const themeMode = useAppearanceState((state) => state.themeMode);
+  const isDark = themeMode === 'dark';
+  const colors = isDark ? AppTheme.dark : AppTheme.light;
   const reserve = reserves.find((item) => item.symbol === normalizedSymbol);
   const [range, setRange] = React.useState<'1w' | '1m' | '6m' | '1y'>('1w');
   const [aprHistory, setAprHistory] = React.useState<ReserveAprPoint[]>([]);
@@ -228,9 +237,9 @@ export default function TokenDetailScreen() {
 
   if (!reserve) {
     return (
-      <View className="flex-1 bg-[#F4F6FB] px-5 py-6">
+      <View className="flex-1 px-5 py-6" style={{ backgroundColor: colors.pageBg }}>
         <Stack.Screen options={{ title: normalizedSymbol || 'Token Detail' }} />
-        <Text className="text-base font-semibold text-[#111827]">未找到该 Token 的储备信息</Text>
+        <Text className="text-base font-semibold" style={{ color: colors.textPrimary }}>未找到该 Token 的储备信息</Text>
       </View>
     );
   }
@@ -286,169 +295,169 @@ export default function TokenDetailScreen() {
   ];
 
   return (
-    <View className="flex-1 bg-[#F4F6FB]">
-      <Stack.Screen options={{ title: `${reserve.symbol} Detail`, headerStyle: { backgroundColor: '#F4F6FB' } }} />
+    <View className="flex-1" style={{ backgroundColor: colors.pageBg }}>
+      <Stack.Screen options={{ title: `${reserve.symbol} Detail`, headerStyle: { backgroundColor: colors.pageBg } }} />
       <ScrollView contentContainerClassName="px-4 py-5 gap-3.5 pb-10" showsVerticalScrollIndicator={false}>
-        <View className="bg-white rounded-3xl p-4 border border-[#E5E7EB]">
+        <View className="rounded-3xl p-4 border" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
           <View className="flex-row items-center gap-3">
             <TokenIcon symbol={reserve.symbol} size={36} />
             <View className="flex-1">
-              <Text className="text-sm text-[#6B7280]">{reserve.symbol}</Text>
-              <Text className="text-[28px] leading-8 font-bold text-[#111827]">{reserve.name}</Text>
+              <Text className="text-sm" style={{ color: colors.textSecondary }}>{reserve.symbol}</Text>
+              <Text className="text-[28px] leading-8 font-bold" style={{ color: colors.textPrimary }}>{reserve.name}</Text>
             </View>
           </View>
           <View className="flex-row flex-wrap mt-3">
             {metrics.map((item) => (
               <View key={item.label} className="w-1/2 mt-3 pr-2">
-                <Text className="text-sm text-[#6B7280]">{item.label}</Text>
-                <Text className="text-[19px] leading-6 font-bold text-[#111827] mt-0.5">{item.value}</Text>
+                <Text className="text-sm" style={{ color: colors.textSecondary }}>{item.label}</Text>
+                <Text className="text-[19px] leading-6 font-bold mt-0.5" style={{ color: colors.textPrimary }}>{item.value}</Text>
               </View>
             ))}
           </View>
         </View>
 
-        <View className="bg-white rounded-3xl p-4 border border-[#E5E7EB]">
-          <Text className="text-2xl font-bold text-[#111827]">Supply Info</Text>
+        <View className="rounded-3xl p-4 border" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+          <Text className="text-2xl font-bold" style={{ color: colors.textPrimary }}>Supply Info</Text>
           <View className="flex-row items-center mt-3">
-            <ProgressRing percent={utilizationRatePercent} />
+            <ProgressRing percent={utilizationRatePercent} isDark={isDark} />
             <View className="ml-3 flex-1">
-              <Text className="text-sm text-[#6B7280]">Total supplied</Text>
-              <Text className="text-[18px] leading-6 font-bold text-[#111827]">
+              <Text className="text-sm" style={{ color: colors.textSecondary }}>Total supplied</Text>
+              <Text className="text-[18px] leading-6 font-bold" style={{ color: colors.textPrimary }}>
                 {formatCompactNumber(reserve.totalSupplies, decimals)} of {formatCompactNumber(reserve.totalLiquidity, decimals)}
               </Text>
-              <Text className="text-sm text-[#6B7280] mt-0.5">
+              <Text className="text-sm mt-0.5" style={{ color: colors.textSecondary }}>
                 $ {formatCompactNumber(reserve.totalSupplies, decimals)} of $ {formatCompactNumber(reserve.totalLiquidity, decimals)}
               </Text>
             </View>
             <View className="ml-2">
-              <Text className="text-sm text-[#6B7280]">APY</Text>
-              <Text className="text-[20px] leading-6 font-bold text-[#111827] mt-0.5">{supplyApy.toFixed(2)}%</Text>
+              <Text className="text-sm" style={{ color: colors.textSecondary }}>APY</Text>
+              <Text className="text-[20px] leading-6 font-bold mt-0.5" style={{ color: colors.textPrimary }}>{supplyApy.toFixed(2)}%</Text>
             </View>
           </View>
           <View className="flex-row items-center mt-3">
-            <View className="h-2.5 w-2.5 rounded-full bg-[#22D3EE]" />
-            <Text className="text-sm text-[#6B7280] ml-2">Supply APR</Text>
-            <View className="ml-auto flex-row bg-[#EEF2FF] rounded-xl overflow-hidden">
-              <Pressable onPress={() => setRange('1w')} className={`px-3 py-1.5 ${range === '1w' ? 'bg-white' : ''}`}>
-                <Text className={`text-sm font-semibold ${range === '1w' ? 'text-[#111827]' : 'text-[#6B7280]'}`}>1w</Text>
+            <View className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: colors.cyan }} />
+            <Text className="text-sm ml-2" style={{ color: colors.textSecondary }}>Supply APR</Text>
+            <View className="ml-auto flex-row rounded-xl overflow-hidden" style={{ backgroundColor: colors.cardAltBg }}>
+              <Pressable onPress={() => setRange('1w')} className="px-3 py-1.5" style={{ backgroundColor: range === '1w' ? colors.cardBg : 'transparent' }}>
+                <Text className="text-sm font-semibold" style={{ color: range === '1w' ? colors.textPrimary : colors.textSecondary }}>1w</Text>
               </Pressable>
-              <Pressable onPress={() => setRange('1m')} className={`px-3 py-1.5 ${range === '1m' ? 'bg-white' : ''}`}>
-                <Text className={`text-sm font-semibold ${range === '1m' ? 'text-[#111827]' : 'text-[#6B7280]'}`}>1m</Text>
+              <Pressable onPress={() => setRange('1m')} className="px-3 py-1.5" style={{ backgroundColor: range === '1m' ? colors.cardBg : 'transparent' }}>
+                <Text className="text-sm font-semibold" style={{ color: range === '1m' ? colors.textPrimary : colors.textSecondary }}>1m</Text>
               </Pressable>
-              <Pressable onPress={() => setRange('6m')} className={`px-3 py-1.5 ${range === '6m' ? 'bg-white' : ''}`}>
-                <Text className={`text-sm font-semibold ${range === '6m' ? 'text-[#111827]' : 'text-[#6B7280]'}`}>6m</Text>
+              <Pressable onPress={() => setRange('6m')} className="px-3 py-1.5" style={{ backgroundColor: range === '6m' ? colors.cardBg : 'transparent' }}>
+                <Text className="text-sm font-semibold" style={{ color: range === '6m' ? colors.textPrimary : colors.textSecondary }}>6m</Text>
               </Pressable>
-              <Pressable onPress={() => setRange('1y')} className={`px-3 py-1.5 ${range === '1y' ? 'bg-white' : ''}`}>
-                <Text className={`text-sm font-semibold ${range === '1y' ? 'text-[#111827]' : 'text-[#6B7280]'}`}>1y</Text>
+              <Pressable onPress={() => setRange('1y')} className="px-3 py-1.5" style={{ backgroundColor: range === '1y' ? colors.cardBg : 'transparent' }}>
+                <Text className="text-sm font-semibold" style={{ color: range === '1y' ? colors.textPrimary : colors.textSecondary }}>1y</Text>
               </Pressable>
             </View>
           </View>
-          <PlaceholderChart lineColor="#22D3EE" avgLabel={`Avg ${supplyAvg.toFixed(2)}%`} points={supplyLinePoints} xLabels={xLabels} />
+          <PlaceholderChart lineColor={colors.cyan} avgLabel={`Avg ${supplyAvg.toFixed(2)}%`} points={supplyLinePoints} xLabels={xLabels} isDark={isDark} />
         </View>
 
-        <View className="bg-white rounded-3xl p-4 border border-[#E5E7EB]">
-          <Text className="text-2xl font-bold text-[#111827]">Collateral usage</Text>
-          <Text className="text-[#22C55E] text-sm font-semibold mt-1.5">Can be collateral</Text>
+        <View className="rounded-3xl p-4 border" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+          <Text className="text-2xl font-bold" style={{ color: colors.textPrimary }}>Collateral usage</Text>
+          <Text className="text-sm font-semibold mt-1.5" style={{ color: colors.success }}>Can be collateral</Text>
           <View className="flex-row gap-2.5 mt-3">
-            <View className="flex-1 border border-[#E5E7EB] rounded-2xl p-4">
-              <Text className="text-sm text-[#6B7280]">Max LTV</Text>
-              <Text className="text-lg font-bold text-[#111827] mt-1.5">{formatPercentFromBps(reserve.baseLTVasCollateral)}</Text>
+            <View className="flex-1 border rounded-2xl p-4" style={{ borderColor: colors.border }}>
+              <Text className="text-sm" style={{ color: colors.textSecondary }}>Max LTV</Text>
+              <Text className="text-lg font-bold mt-1.5" style={{ color: colors.textPrimary }}>{formatPercentFromBps(reserve.baseLTVasCollateral)}</Text>
             </View>
-            <View className="flex-1 border border-[#E5E7EB] rounded-2xl p-4">
-              <Text className="text-sm text-[#6B7280]">Liquidation threshold</Text>
-              <Text className="text-lg font-bold text-[#111827] mt-1.5">{formatPercentFromBps(reserve.reserveLiquidationThreshold)}</Text>
+            <View className="flex-1 border rounded-2xl p-4" style={{ borderColor: colors.border }}>
+              <Text className="text-sm" style={{ color: colors.textSecondary }}>Liquidation threshold</Text>
+              <Text className="text-lg font-bold mt-1.5" style={{ color: colors.textPrimary }}>{formatPercentFromBps(reserve.reserveLiquidationThreshold)}</Text>
             </View>
-            <View className="flex-1 border border-[#E5E7EB] rounded-2xl p-4">
-              <Text className="text-sm text-[#6B7280]">Liquidation penalty</Text>
-              <Text className="text-lg font-bold text-[#111827] mt-1.5">{formatPercentFromBps(liquidationPenalty)}</Text>
+            <View className="flex-1 border rounded-2xl p-4" style={{ borderColor: colors.border }}>
+              <Text className="text-sm" style={{ color: colors.textSecondary }}>Liquidation penalty</Text>
+              <Text className="text-lg font-bold mt-1.5" style={{ color: colors.textPrimary }}>{formatPercentFromBps(liquidationPenalty)}</Text>
             </View>
           </View>
         </View>
 
-        <View className="bg-white rounded-3xl p-4 border border-[#E5E7EB]">
-          <Text className="text-2xl font-bold text-[#111827]">Borrow info</Text>
+        <View className="rounded-3xl p-4 border" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+          <Text className="text-2xl font-bold" style={{ color: colors.textPrimary }}>Borrow info</Text>
           <View className="flex-row items-center mt-3">
-            <ProgressRing percent={utilizationRatePercent} />
+            <ProgressRing percent={utilizationRatePercent} isDark={isDark} />
             <View className="ml-3 flex-1">
-              <Text className="text-sm text-[#6B7280]">Total borrowed</Text>
-              <Text className="text-[18px] leading-6 font-bold text-[#111827]">
+              <Text className="text-sm" style={{ color: colors.textSecondary }}>Total borrowed</Text>
+              <Text className="text-[18px] leading-6 font-bold" style={{ color: colors.textPrimary }}>
                 {formatCompactNumber(totalBorrowed, decimals)} of {formatCompactNumber(reserve.totalLiquidity, decimals)}
               </Text>
-              <Text className="text-sm text-[#6B7280] mt-0.5">
+              <Text className="text-sm mt-0.5" style={{ color: colors.textSecondary }}>
                 $ {formatCompactNumber(totalBorrowed, decimals)} of $ {formatCompactNumber(reserve.totalLiquidity, decimals)}
               </Text>
             </View>
             <View className="ml-2">
-              <Text className="text-sm text-[#6B7280]">Borrow APY</Text>
-              <Text className="text-[20px] leading-6 font-bold text-[#111827] mt-0.5">{borrowApy.toFixed(2)}%</Text>
+              <Text className="text-sm" style={{ color: colors.textSecondary }}>Borrow APY</Text>
+              <Text className="text-[20px] leading-6 font-bold mt-0.5" style={{ color: colors.textPrimary }}>{borrowApy.toFixed(2)}%</Text>
             </View>
           </View>
           <View className="flex-row items-center mt-3">
-            <View className="h-2.5 w-2.5 rounded-full bg-[#D946EF]" />
-            <Text className="text-sm text-[#6B7280] ml-2">Borrow APR, variable</Text>
-            <View className="ml-auto flex-row bg-[#EEF2FF] rounded-xl overflow-hidden">
-              <Pressable onPress={() => setRange('1w')} className={`px-3 py-1.5 ${range === '1w' ? 'bg-white' : ''}`}>
-                <Text className={`text-sm font-semibold ${range === '1w' ? 'text-[#111827]' : 'text-[#6B7280]'}`}>1w</Text>
+            <View className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: colors.purple }} />
+            <Text className="text-sm ml-2" style={{ color: colors.textSecondary }}>Borrow APR, variable</Text>
+            <View className="ml-auto flex-row rounded-xl overflow-hidden" style={{ backgroundColor: colors.cardAltBg }}>
+              <Pressable onPress={() => setRange('1w')} className="px-3 py-1.5" style={{ backgroundColor: range === '1w' ? colors.cardBg : 'transparent' }}>
+                <Text className="text-sm font-semibold" style={{ color: range === '1w' ? colors.textPrimary : colors.textSecondary }}>1w</Text>
               </Pressable>
-              <Pressable onPress={() => setRange('1m')} className={`px-3 py-1.5 ${range === '1m' ? 'bg-white' : ''}`}>
-                <Text className={`text-sm font-semibold ${range === '1m' ? 'text-[#111827]' : 'text-[#6B7280]'}`}>1m</Text>
+              <Pressable onPress={() => setRange('1m')} className="px-3 py-1.5" style={{ backgroundColor: range === '1m' ? colors.cardBg : 'transparent' }}>
+                <Text className="text-sm font-semibold" style={{ color: range === '1m' ? colors.textPrimary : colors.textSecondary }}>1m</Text>
               </Pressable>
-              <Pressable onPress={() => setRange('6m')} className={`px-3 py-1.5 ${range === '6m' ? 'bg-white' : ''}`}>
-                <Text className={`text-sm font-semibold ${range === '6m' ? 'text-[#111827]' : 'text-[#6B7280]'}`}>6m</Text>
+              <Pressable onPress={() => setRange('6m')} className="px-3 py-1.5" style={{ backgroundColor: range === '6m' ? colors.cardBg : 'transparent' }}>
+                <Text className="text-sm font-semibold" style={{ color: range === '6m' ? colors.textPrimary : colors.textSecondary }}>6m</Text>
               </Pressable>
-              <Pressable onPress={() => setRange('1y')} className={`px-3 py-1.5 ${range === '1y' ? 'bg-white' : ''}`}>
-                <Text className={`text-sm font-semibold ${range === '1y' ? 'text-[#111827]' : 'text-[#6B7280]'}`}>1y</Text>
+              <Pressable onPress={() => setRange('1y')} className="px-3 py-1.5" style={{ backgroundColor: range === '1y' ? colors.cardBg : 'transparent' }}>
+                <Text className="text-sm font-semibold" style={{ color: range === '1y' ? colors.textPrimary : colors.textSecondary }}>1y</Text>
               </Pressable>
             </View>
           </View>
-          <PlaceholderChart lineColor="#D946EF" avgLabel={`Avg ${borrowAvg.toFixed(2)}%`} points={borrowLinePoints} xLabels={xLabels} />
+          <PlaceholderChart lineColor={colors.purple} avgLabel={`Avg ${borrowAvg.toFixed(2)}%`} points={borrowLinePoints} xLabels={xLabels} isDark={isDark} />
         </View>
 
-        <View className="bg-white rounded-3xl p-4 border border-[#E5E7EB]">
-          <Text className="text-2xl font-bold text-[#111827]">Collector Info</Text>
+        <View className="rounded-3xl p-4 border" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+          <Text className="text-2xl font-bold" style={{ color: colors.textPrimary }}>Collector Info</Text>
           <View className="flex-row mt-3 gap-2.5">
-            <View className="flex-1 border border-[#E5E7EB] rounded-2xl p-4">
-              <Text className="text-sm text-[#6B7280]">Reserve factor</Text>
-              <Text className="text-lg font-bold text-[#111827] mt-1.5">{formatPercentFromBps(reserve.reserveFactor)}</Text>
+            <View className="flex-1 border rounded-2xl p-4" style={{ borderColor: colors.border }}>
+              <Text className="text-sm" style={{ color: colors.textSecondary }}>Reserve factor</Text>
+              <Text className="text-lg font-bold mt-1.5" style={{ color: colors.textPrimary }}>{formatPercentFromBps(reserve.reserveFactor)}</Text>
             </View>
-            <View className="flex-1 border border-[#E5E7EB] rounded-2xl p-4">
-              <Text className="text-sm text-[#6B7280]">Total borrowed</Text>
-              <Text className="text-lg font-bold text-[#111827] mt-1.5">{formatCompactNumber(totalBorrowed, decimals)}</Text>
+            <View className="flex-1 border rounded-2xl p-4" style={{ borderColor: colors.border }}>
+              <Text className="text-sm" style={{ color: colors.textSecondary }}>Total borrowed</Text>
+              <Text className="text-lg font-bold mt-1.5" style={{ color: colors.textPrimary }}>{formatCompactNumber(totalBorrowed, decimals)}</Text>
             </View>
           </View>
         </View>
 
-        <View className="bg-white rounded-3xl p-4 border border-[#E5E7EB]">
-          <Text className="text-2xl font-bold text-[#111827]">Interest rate model</Text>
+        <View className="rounded-3xl p-4 border" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+          <Text className="text-2xl font-bold" style={{ color: colors.textPrimary }}>Interest rate model</Text>
           <View className="flex-row items-center justify-between mt-3">
             <View>
-              <Text className="text-sm text-[#6B7280]">Utilization Rate</Text>
-              <Text className="text-[20px] leading-6 font-bold text-[#111827] mt-0.5">{formatPercentFromDecimal(reserve.utilizationRate)}</Text>
+              <Text className="text-sm" style={{ color: colors.textSecondary }}>Utilization Rate</Text>
+              <Text className="text-[20px] leading-6 font-bold mt-0.5" style={{ color: colors.textPrimary }}>{formatPercentFromDecimal(reserve.utilizationRate)}</Text>
             </View>
-            <Pressable className="rounded-xl border border-[#D1D5DB] px-3.5 py-2">
-              <Text className="text-xs font-bold tracking-wide text-[#374151]">INTEREST RATE STRATEGY</Text>
+            <Pressable className="rounded-xl border px-3.5 py-2" style={{ borderColor: colors.border }}>
+              <Text className="text-xs font-bold tracking-wide" style={{ color: colors.textSecondary }}>INTEREST RATE STRATEGY</Text>
             </Pressable>
           </View>
           <View className="flex-row items-center mt-3">
-            <View className="h-2.5 w-2.5 rounded-full bg-[#D946EF]" />
-            <Text className="text-sm text-[#6B7280] ml-2">Borrow APR, variable</Text>
-            <View className="h-2.5 w-2.5 rounded-full bg-[#2563EB] ml-4" />
-            <Text className="text-sm text-[#6B7280] ml-2">Utilization Rate</Text>
+            <View className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: colors.purple }} />
+            <Text className="text-sm ml-2" style={{ color: colors.textSecondary }}>Borrow APR, variable</Text>
+            <View className="h-2.5 w-2.5 rounded-full ml-4" style={{ backgroundColor: colors.accent }} />
+            <Text className="text-sm ml-2" style={{ color: colors.textSecondary }}>Utilization Rate</Text>
           </View>
-          <View className="mt-3 rounded-2xl bg-[#F8FAFC] border border-[#E5E7EB] px-3 py-2.5">
+          <View className="mt-3 rounded-2xl border px-3 py-2.5" style={{ backgroundColor: colors.cardAltBg, borderColor: colors.border }}>
             <Svg width="100%" height={136} viewBox="0 0 320 136">
-              <Line x1="0" y1="40" x2="320" y2="40" stroke="#E5E7EB" strokeWidth="1" strokeDasharray="4 4" />
-              <Line x1="0" y1="80" x2="320" y2="80" stroke="#E5E7EB" strokeWidth="1" strokeDasharray="4 4" />
-              <Line x1="0" y1="120" x2="320" y2="120" stroke="#E5E7EB" strokeWidth="1" strokeDasharray="4 4" />
-              <Polyline points={modelBorrowPoints} fill="none" stroke="#D946EF" strokeWidth="3" />
-              <Polyline points={modelUtilizationPoints} fill="none" stroke="#2563EB" strokeWidth="3" />
+              <Line x1="0" y1="40" x2="320" y2="40" stroke={colors.lineGrid} strokeWidth="1" strokeDasharray="4 4" />
+              <Line x1="0" y1="80" x2="320" y2="80" stroke={colors.lineGrid} strokeWidth="1" strokeDasharray="4 4" />
+              <Line x1="0" y1="120" x2="320" y2="120" stroke={colors.lineGrid} strokeWidth="1" strokeDasharray="4 4" />
+              <Polyline points={modelBorrowPoints} fill="none" stroke={colors.purple} strokeWidth="3" />
+              <Polyline points={modelUtilizationPoints} fill="none" stroke={colors.accent} strokeWidth="3" />
             </Svg>
             <View className="flex-row justify-between px-1">
-              <Text className="text-xs text-[#6B7280]">0%</Text>
-              <Text className="text-xs text-[#6B7280]">25%</Text>
-              <Text className="text-xs text-[#6B7280]">50%</Text>
-              <Text className="text-xs text-[#6B7280]">75%</Text>
-              <Text className="text-xs text-[#6B7280]">100%</Text>
+              <Text className="text-xs" style={{ color: colors.textSecondary }}>0%</Text>
+              <Text className="text-xs" style={{ color: colors.textSecondary }}>25%</Text>
+              <Text className="text-xs" style={{ color: colors.textSecondary }}>50%</Text>
+              <Text className="text-xs" style={{ color: colors.textSecondary }}>75%</Text>
+              <Text className="text-xs" style={{ color: colors.textSecondary }}>100%</Text>
             </View>
           </View>
         </View>

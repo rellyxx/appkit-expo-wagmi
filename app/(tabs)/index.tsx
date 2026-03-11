@@ -12,11 +12,16 @@ import BigNumberJs from 'bignumber.js';
 import { BorrowTab } from './BorrowTab';
 import { SupplyTab } from './SupplyTab';
 import deployedContracts from '@/contracts/deployedContracts';
+import { useAppearanceState } from '@/store/useAppearanceState';
+import { AppTheme } from '@/constants/AppTheme';
 
 type SortDirection = 'asc' | 'desc';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const themeMode = useAppearanceState((state) => state.themeMode);
+  const isDark = themeMode === 'dark';
+  const colors = isDark ? AppTheme.dark : AppTheme.light;
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const [activeTab, setActiveTab] = React.useState(0);
@@ -244,7 +249,7 @@ export default function HomeScreen() {
       name: reserve.name,
       amount: balance ? formatDisplayAmount(balance) : '0',
       value: getUsdValue(balance, reserve.price?.priceInEth),
-      color: tokenColors[reserve.symbol] ?? themeColor,
+      color: tokenColors[reserve.symbol] ?? colors.accent,
     };
   });
 
@@ -344,7 +349,7 @@ export default function HomeScreen() {
         value: getUsdValue(displayAmount, reserve.price?.priceInEth),
         liquidityRate: reserve.liquidityRate?.toString() ?? '0',
         apyValue: supplyApy,
-        color: tokenColors[reserve.symbol] ?? themeColor,
+        color: tokenColors[reserve.symbol] ?? colors.accent,
       };
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);
@@ -399,7 +404,7 @@ export default function HomeScreen() {
         value: getUsdValue(displayAmount, reserve.price?.priceInEth),
         apr: `${borrowApr.toFixed(2)}%`,
         aprValue: borrowApr,
-        color: tokenColors[reserve.symbol] ?? themeColor,
+        color: tokenColors[reserve.symbol] ?? colors.accent,
       };
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);
@@ -446,7 +451,7 @@ export default function HomeScreen() {
         value: getUsdValue(displayAmount, reserve.price?.priceInEth),
         apr: `${borrowApr.toFixed(2)}%`,
         aprValue: borrowApr,
-        color: tokenColors[reserve.symbol] ?? themeColor,
+        color: tokenColors[reserve.symbol] ?? colors.accent,
       };
     })
     .filter((item): item is NonNullable<typeof item> => item !== null);
@@ -514,7 +519,7 @@ export default function HomeScreen() {
   );
 
   return (
-    <View className="flex-1 bg-[#F4F6FB]">
+    <View className="flex-1" style={{ backgroundColor: colors.pageBg }}>
       <DashboardHeader title="Dashboard" />
       <ScrollView
         contentContainerClassName="px-5 pb-28 gap-4"
@@ -524,22 +529,22 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
 
-        <View className="rounded-[20px] p-5 gap-2 shadow-lg" style={{ backgroundColor: themeColor }}>
-          <Text className="text-sm font-semibold text-[#D6E4FF]">Net Worth</Text>
+        <View className="rounded-[20px] p-5 gap-2 shadow-lg" style={{ backgroundColor: colors.accent }}>
+          <Text className="text-sm font-semibold text-[#E5EDFF]">Net Worth</Text>
           <View className="self-start rounded-full bg-white/20 px-2.5 py-1.5">
             <Text className="text-xs font-semibold text-white">↗  +2.4% vs last week</Text>
           </View>
         </View>
 
-        <View className="flex-row border-b border-[#E5E7EB]">
+        <View className="flex-row border-b" style={{ borderBottomColor: colors.border }}>
           <Pressable
             className="flex-1 items-center py-3 border-b-2"
             style={{ borderBottomColor: activeTab === 0 ? themeColor : 'transparent' }}
             onPress={() => handleTabPress(0)}
           >
             <Text
-              className={`text-sm ${activeTab === 0 ? 'font-bold' : 'font-semibold text-[#6B7280]'}`}
-              style={activeTab === 0 ? { color: themeColor } : undefined}
+              className="text-sm"
+              style={activeTab === 0 ? { color: colors.accent, fontWeight: '700' } : { color: colors.tabInactive, fontWeight: '600' }}
             >
               Supply
             </Text>
@@ -550,8 +555,8 @@ export default function HomeScreen() {
             onPress={() => handleTabPress(1)}
           >
             <Text
-              className={`text-sm ${activeTab === 1 ? 'font-bold' : 'font-semibold text-[#6B7280]'}`}
-              style={activeTab === 1 ? { color: themeColor } : undefined}
+              className="text-sm"
+              style={activeTab === 1 ? { color: colors.accent, fontWeight: '700' } : { color: colors.tabInactive, fontWeight: '600' }}
             >
               Borrow
             </Text>
@@ -592,6 +597,7 @@ export default function HomeScreen() {
                 }}
                 onTokenPress={handleTokenPress}
                 themeColor={themeColor}
+                isDark={isDark}
               />
             </View>
 
@@ -617,6 +623,7 @@ export default function HomeScreen() {
                 }}
                 onTokenPress={handleTokenPress}
                 themeColor={themeColor}
+                isDark={isDark}
               />
             </View>
           </ScrollView>

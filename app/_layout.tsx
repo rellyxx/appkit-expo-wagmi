@@ -24,9 +24,11 @@ import 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
 import * as SystemUI from 'expo-system-ui';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
 import { themeColor } from '@/constants/Colors';
 import { storage } from "@/utils/StorageUtil";
+import { useAppearanceState } from '@/store/useAppearanceState';
+import { AppTheme } from '@/constants/AppTheme';
+import { ThemeController } from '@reown/appkit-core-react-native';
 import { View } from 'react-native';
 import { useEffect } from 'react';
 
@@ -107,6 +109,7 @@ const appkit = createAppKit({
   themeVariables: {
     accent: themeColor,
   },
+  themeMode: 'light',
   features: {
     socials: false,
     onramp: false
@@ -114,7 +117,10 @@ const appkit = createAppKit({
 });
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const themeMode = useAppearanceState((state) => state.themeMode);
+  const isDark = themeMode === 'dark';
+  const colors = isDark ? AppTheme.dark : AppTheme.light;
+  const initializeTheme = useAppearanceState((state) => state.initializeTheme);
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     KHTeka: require('../assets/fonts/KHTeka-Regular.otf'),
@@ -123,8 +129,16 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    SystemUI.setBackgroundColorAsync('#F4F6FB');
-  }, []);
+    initializeTheme();
+  }, [initializeTheme]);
+
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(colors.pageBg);
+  }, [colors.pageBg]);
+
+  useEffect(() => {
+    ThemeController.setThemeMode(themeMode);
+  }, [themeMode]);
 
   if (!loaded) {
     // Async font loading only occurs in development.
@@ -132,7 +146,7 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={themeMode === 'dark' ? DarkTheme : DefaultTheme}>
       <WagmiProvider config={wagmiAdapter.wagmiConfig}>
         <QueryClientProvider client={queryClient}>
           <AppKitProvider instance={appkit}>
@@ -140,7 +154,7 @@ export default function RootLayout() {
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="+not-found" />
           </Stack>
-          <StatusBar style="dark" backgroundColor="#F4F6FB" translucent={false} />
+          <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={colors.pageBg} translucent={false} />
           {/* This is a workaround for the Android modal issue. https://github.com/expo/expo/issues/32991#issuecomment-2489620459 */}
           <View style={{ position: "absolute", height: "100%", width: "100%" }}>
             <AppKit />

@@ -8,8 +8,13 @@ import TabBarBackground from '@/components/ui/TabBarBackground';
 import { themeColor } from '@/constants/Colors';
 import { useChainId } from 'wagmi';
 import { useGlobalState } from '@/store/useGlobalState';
+import { useAppearanceState } from '@/store/useAppearanceState';
+import { AppTheme } from '@/constants/AppTheme';
 export default function TabLayout() {
   const chainId = useChainId();
+  const themeMode = useAppearanceState((state) => state.themeMode);
+  const isDark = themeMode === 'dark';
+  const colors = isDark ? AppTheme.dark : AppTheme.light;
   const { fetchReserves, setChainId } = useGlobalState();
   useEffect(() => {
     if (typeof chainId === 'number') {
@@ -21,15 +26,20 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: themeColor,
+        tabBarInactiveTintColor: colors.tabInactive,
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
         tabBarStyle: Platform.select({
           ios: {
-            // Use a transparent background on iOS to show the blur effect
             position: 'absolute',
+            backgroundColor: colors.tabBarBg,
+            borderTopColor: colors.border,
           },
-          default: {},
+          default: {
+            backgroundColor: colors.tabBarBg,
+            borderTopColor: colors.border,
+          },
         }),
       }}>
       <Tabs.Screen

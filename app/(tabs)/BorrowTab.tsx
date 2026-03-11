@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { TokenIcon } from '@/components/TokenIcon';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { AppTheme } from '@/constants/AppTheme';
 
 type BorrowItem = {
   symbol: string;
@@ -28,6 +29,7 @@ type BorrowTabProps = {
   onToggleAvailableBorrowAprSort: () => void;
   onTokenPress: (symbol: string) => void;
   themeColor: string;
+  isDark: boolean;
 };
 
 export function BorrowTab({
@@ -39,11 +41,13 @@ export function BorrowTab({
   onToggleAvailableBorrowAprSort,
   onTokenPress,
   themeColor,
+  isDark,
 }: BorrowTabProps) {
+  const colors = isDark ? AppTheme.dark : AppTheme.light;
   return (
     <View className="gap-4">
       <View className="flex-row items-end justify-between">
-        <Text className="text-lg font-bold text-[#111827]">Your borrows</Text>
+        <Text className="text-lg font-bold" style={{ color: colors.textPrimary }}>Your borrows</Text>
         <View className="flex-row items-end gap-6">
           <Pressable
             className="flex-row gap-1 items-end"
@@ -60,10 +64,10 @@ export function BorrowTab({
           >
             {({ pressed }) => (
               <>
-                <Text className="text-xs font-semibold" style={{ color: pressed ? themeColor : '#9CA3AF' }}>
+                <Text className="text-xs font-semibold" style={{ color: pressed ? themeColor : colors.textMuted }}>
                   Debt
                 </Text>
-                <FontAwesome name="sort" size={12} color={pressed ? themeColor : '#9CA3AF'} />
+                <FontAwesome name="sort" size={12} color={pressed ? themeColor : colors.textMuted} />
               </>
             )}
           </Pressable>
@@ -82,10 +86,10 @@ export function BorrowTab({
         >
           {({ pressed }) => (
             <>
-              <Text className="text-xs font-semibold" style={{ color: pressed ? themeColor : '#9CA3AF' }}>
+              <Text className="text-xs font-semibold" style={{ color: pressed ? themeColor : colors.textMuted }}>
                 APR (%)
               </Text>
-              <FontAwesome name="sort" size={12} color={pressed ? themeColor : '#9CA3AF'} />
+              <FontAwesome name="sort" size={12} color={pressed ? themeColor : colors.textMuted} />
             </>
           )}
           </Pressable>
@@ -94,30 +98,31 @@ export function BorrowTab({
       </View>
 
       {borrows.length === 0 ? (
-        <View className="bg-white rounded-2xl p-4 shadow-md">
-          <Text className="text-[13px] text-[#6B7280]">No borrowed assets yet</Text>
+        <View className="rounded-2xl p-4 shadow-md" style={{ backgroundColor: colors.cardBg }}>
+          <Text className="text-[13px]" style={{ color: colors.textSecondary }}>No borrowed assets yet</Text>
         </View>
       ) : (
         borrows.map((item) => (
           <Pressable
             key={item.symbol}
             onPress={() => onTokenPress(item.symbol)}
-            className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-md"
+            className="rounded-2xl p-4 flex-row items-center justify-between shadow-md"
+            style={{ backgroundColor: colors.cardBg }}
           >
             <View className="flex-row items-center gap-3">
               <View className="h-11 w-11 rounded-full items-center justify-center" style={{ backgroundColor: `${item.color}22` }}>
                 <TokenIcon symbol={item.symbol} size={28} />
               </View>
               <View>
-                <Text className="text-base font-bold text-[#111827]">{item.symbol}</Text>
+                <Text className="text-base font-bold" style={{ color: colors.textPrimary }}>{item.symbol}</Text>
               </View>
             </View>
             <View className="flex-row gap-6 items-center">
               <View className="flex items-end">
-                <Text className="text-[16px] font-bold text-[#353638] mt-0.5">{item.amount}</Text>
-                <Text className="text-[13px] text-[#6B7280] mt-0.5">${item.value}</Text>
+                <Text className="text-[16px] font-bold mt-0.5" style={{ color: colors.textPrimary }}>{item.amount}</Text>
+                <Text className="text-[13px] mt-0.5" style={{ color: colors.textSecondary }}>${item.value}</Text>
               </View>
-              <View className="bg-[#DC2626] rounded-full px-2 py-0.5 w-20 items-center justify-center">
+              <View className="rounded-full px-2 py-0.5 w-20 items-center justify-center" style={{ backgroundColor: colors.danger }}>
                 <Text className="text-sm font-bold text-white">{item.apr}</Text>
               </View>
             </View>
@@ -126,7 +131,7 @@ export function BorrowTab({
       )}
 
       <View className="flex-row items-end justify-between">
-        <Text className="mt-1.5 text-base font-bold text-[#111827]">Available to Borrow</Text>
+        <Text className="mt-1.5 text-base font-bold" style={{ color: colors.textPrimary }}>Available to Borrow</Text>
          <View className="flex-row items-end gap-6">
           <Pressable
             className="flex-row gap-1 items-end"
@@ -143,10 +148,10 @@ export function BorrowTab({
           >
             {({ pressed }) => (
               <>
-                <Text className="text-xs font-semibold" style={{ color: pressed ? themeColor : '#9CA3AF' }}>
+                <Text className="text-xs font-semibold" style={{ color: pressed ? themeColor : colors.textMuted }}>
                   Available
                 </Text>
-                <FontAwesome name="sort" size={12} color={pressed ? themeColor : '#9CA3AF'} />
+                <FontAwesome name="sort" size={12} color={pressed ? themeColor : colors.textMuted} />
               </>
             )}
           </Pressable>
@@ -165,10 +170,10 @@ export function BorrowTab({
           >
             {({ pressed }) => (
               <>
-                <Text className="text-xs font-semibold" style={{ color: pressed ? themeColor : '#9CA3AF' }}>
+                <Text className="text-xs font-semibold" style={{ color: pressed ? themeColor : colors.textMuted }}>
                   APR (%)
                 </Text>
-                <FontAwesome name="sort" size={12} color={pressed ? themeColor : '#9CA3AF'} />
+                <FontAwesome name="sort" size={12} color={pressed ? themeColor : colors.textMuted} />
               </>
             )}
           </Pressable>
@@ -180,22 +185,23 @@ export function BorrowTab({
         <Pressable
           key={item.symbol}
           onPress={() => onTokenPress(item.symbol)}
-          className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-md"
+          className="rounded-2xl p-4 flex-row items-center justify-between shadow-md"
+          style={{ backgroundColor: colors.cardBg }}
         >
           <View className="flex-row items-center gap-3">
             <View className="h-11 w-11 rounded-full items-center justify-center" style={{ backgroundColor: `${item.color}22` }}>
               <TokenIcon symbol={item.symbol} size={28} />
             </View>
             <View>
-              <Text className="text-base font-bold text-[#111827]">{item.symbol}</Text>
+              <Text className="text-base font-bold" style={{ color: colors.textPrimary }}>{item.symbol}</Text>
             </View>
           </View>
           <View className="flex-row gap-6 items-center">
             <View className="flex items-end">
-              <Text className="text-[16px] font-bold text-[#353638] mt-0.5">{item.amount}</Text>
-              <Text className="text-[13px] text-[#6B7280] mt-0.5">${item.value}</Text>
+              <Text className="text-[16px] font-bold mt-0.5" style={{ color: colors.textPrimary }}>{item.amount}</Text>
+              <Text className="text-[13px] mt-0.5" style={{ color: colors.textSecondary }}>${item.value}</Text>
             </View>
-            <View className="bg-[#DC2626] rounded-full px-2 py-0.5 w-20 items-center justify-center">
+            <View className="rounded-full px-2 py-0.5 w-20 items-center justify-center" style={{ backgroundColor: colors.danger }}>
               <Text className="text-sm font-bold text-white">{item.apr}</Text>
             </View>
           </View>
