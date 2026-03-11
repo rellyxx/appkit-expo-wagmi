@@ -42,7 +42,7 @@ const queryClient = new QueryClient();
 const projectId =
   process.env.EXPO_PUBLIC_REOWN_PROJECT_ID ??
   Constants.expoConfig?.extra?.reownProjectId ??
-  "b8e39dfb697ba26ac5a77a4b29b35604";
+  "4827883b8c3a2061c885e9c5117b0455";
 
 
 
