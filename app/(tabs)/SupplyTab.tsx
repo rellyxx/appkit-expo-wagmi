@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { formatAPY } from '@/utils/common';
+import { TokenIcon } from '@/components/TokenIcon';
 
 type SupplyItem = {
   symbol: string;
@@ -64,9 +65,7 @@ export function SupplyTab({
           <View key={item.symbol} className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-md">
             <View className="flex-row items-center gap-3">
               <View className="h-11 w-11 rounded-full items-center justify-center" style={{ backgroundColor: `${item.color}22` }}>
-                <Text className="text-lg font-bold" style={{ color: item.color }}>
-                  {item.icon}
-                </Text>
+                <TokenIcon symbol={item.symbol} size={28} />
               </View>
               <View>
                 <Text className="text-base font-bold text-[#111827]">{item.symbol}</Text>
@@ -114,9 +113,7 @@ export function SupplyTab({
         <View key={item.symbol} className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-md">
           <View className="flex-row items-center gap-3">
             <View className="h-11 w-11 rounded-full items-center justify-center" style={{ backgroundColor: `${item.color}22` }}>
-              <Text className="text-lg font-bold" style={{ color: item.color }}>
-                {item.icon}
-              </Text>
+              <TokenIcon symbol={item.symbol} size={28} />
             </View>
             <View>
               <Text className="text-base font-bold text-[#111827]">{item.symbol}</Text>
