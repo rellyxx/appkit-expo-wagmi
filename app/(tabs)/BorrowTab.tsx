@@ -22,7 +22,9 @@ type AvailableBorrowItem = {
 type BorrowTabProps = {
   borrows: BorrowItem[];
   availableToBorrow: AvailableBorrowItem[];
+  onToggleBorrowBalanceSort: () => void;
   onToggleBorrowAprSort: () => void;
+  onToggleAvailableBorrowBalanceSort: () => void;
   onToggleAvailableBorrowAprSort: () => void;
   themeColor: string;
 };
@@ -30,16 +32,41 @@ type BorrowTabProps = {
 export function BorrowTab({
   borrows,
   availableToBorrow,
+  onToggleBorrowBalanceSort,
   onToggleBorrowAprSort,
+  onToggleAvailableBorrowBalanceSort,
   onToggleAvailableBorrowAprSort,
   themeColor,
 }: BorrowTabProps) {
   return (
     <View className="gap-4">
-      <View className="flex-row items-center justify-between">
-        <Text className="text-lg font-bold text-[#111827]">My Borrows</Text>
-        <Pressable
-          className="flex-row items-center gap-1 rounded px-2 py-1 h-10"
+      <View className="flex-row items-end justify-between">
+        <Text className="text-lg font-bold text-[#111827]">Your borrows</Text>
+        <View className="flex-row items-end gap-6">
+          <Pressable
+            className="flex-row gap-1 items-end"
+            onPress={onToggleBorrowBalanceSort}
+            style={({ pressed }) => [
+              pressed
+                ? {
+                    opacity: 0.75,
+                    transform: [{ scale: 0.94 }],
+                    backgroundColor: 'rgba(17,24,39,0.1)',
+                  }
+                : null,
+            ]}
+          >
+            {({ pressed }) => (
+              <>
+                <Text className="text-xs font-semibold" style={{ color: pressed ? themeColor : '#9CA3AF' }}>
+                  Debt
+                </Text>
+                <FontAwesome name="sort" size={12} color={pressed ? themeColor : '#9CA3AF'} />
+              </>
+            )}
+          </Pressable>
+          <Pressable
+          className="flex-row gap-1 w-20 justify-end mr-4 h-6 items-end"
           onPress={onToggleBorrowAprSort}
           style={({ pressed }) => [
             pressed
@@ -59,7 +86,9 @@ export function BorrowTab({
               <FontAwesome name="sort" size={12} color={pressed ? themeColor : '#9CA3AF'} />
             </>
           )}
-        </Pressable>
+          </Pressable>
+        </View>
+        
       </View>
 
       {borrows.length === 0 ? (
@@ -90,30 +119,55 @@ export function BorrowTab({
         ))
       )}
 
-      <View className="flex-row items-center justify-between">
+      <View className="flex-row items-end justify-between">
         <Text className="mt-1.5 text-base font-bold text-[#111827]">Available to Borrow</Text>
-        <Pressable
-          className="flex-row items-center gap-1 rounded px-2 py-1 h-10"
-          onPress={onToggleAvailableBorrowAprSort}
-          style={({ pressed }) => [
-            pressed
-              ? {
-                  opacity: 0.75,
-                  transform: [{ scale: 0.94 }],
-                  backgroundColor: 'rgba(17,24,39,0.1)',
-                }
-              : null,
-          ]}
-        >
-          {({ pressed }) => (
-            <>
-              <Text className="text-xs font-semibold" style={{ color: pressed ? themeColor : '#9CA3AF' }}>
-                APR (%)
-              </Text>
-              <FontAwesome name="sort" size={12} color={pressed ? themeColor : '#9CA3AF'} />
-            </>
-          )}
-        </Pressable>
+         <View className="flex-row items-end gap-6">
+          <Pressable
+            className="flex-row gap-1 items-end"
+            onPress={onToggleAvailableBorrowBalanceSort}
+            style={({ pressed }) => [
+              pressed
+                ? {
+                    opacity: 0.75,
+                    transform: [{ scale: 0.94 }],
+                    backgroundColor: 'rgba(17,24,39,0.1)',
+                  }
+                : null,
+            ]}
+          >
+            {({ pressed }) => (
+              <>
+                <Text className="text-xs font-semibold" style={{ color: pressed ? themeColor : '#9CA3AF' }}>
+                  Available
+                </Text>
+                <FontAwesome name="sort" size={12} color={pressed ? themeColor : '#9CA3AF'} />
+              </>
+            )}
+          </Pressable>
+          <Pressable
+            className="flex-row gap-1 w-20 justify-end mr-4 h-6 items-end"
+            onPress={onToggleAvailableBorrowAprSort}
+            style={({ pressed }) => [
+              pressed
+                ? {
+                    opacity: 0.75,
+                    transform: [{ scale: 0.94 }],
+                    backgroundColor: 'rgba(17,24,39,0.1)',
+                  }
+                : null,
+            ]}
+          >
+            {({ pressed }) => (
+              <>
+                <Text className="text-xs font-semibold" style={{ color: pressed ? themeColor : '#9CA3AF' }}>
+                  APR (%)
+                </Text>
+                <FontAwesome name="sort" size={12} color={pressed ? themeColor : '#9CA3AF'} />
+              </>
+            )}
+          </Pressable>
+        </View>
+
       </View>
 
       {availableToBorrow.map((item) => (

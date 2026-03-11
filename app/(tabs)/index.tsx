@@ -222,10 +222,18 @@ export default function HomeScreen() {
     });
   };
 
-  const [apySortDirection, setApySortDirection] = React.useState<SortDirection>('desc');
   const [depositApySortDirection, setDepositApySortDirection] = React.useState<SortDirection>('desc');
+  const [depositBalanceSortDirection, setDepositBalanceSortDirection] = React.useState<SortDirection>('desc');
+  const [depositSortKey, setDepositSortKey] = React.useState<'apy' | 'balance'>('apy');
+  const [supplyApySortDirection, setSupplyApySortDirection] = React.useState<SortDirection>('desc');
+  const [supplyBalanceSortDirection, setSupplyBalanceSortDirection] = React.useState<SortDirection>('desc');
+  const [supplySortKey, setSupplySortKey] = React.useState<'apy' | 'balance'>('apy');
   const [borrowAprSortDirection, setBorrowAprSortDirection] = React.useState<SortDirection>('desc');
+  const [borrowBalanceSortDirection, setBorrowBalanceSortDirection] = React.useState<SortDirection>('desc');
+  const [borrowSortKey, setBorrowSortKey] = React.useState<'apr' | 'balance'>('apr');
   const [availableBorrowAprSortDirection, setAvailableBorrowAprSortDirection] = React.useState<SortDirection>('desc');
+  const [availableBorrowBalanceSortDirection, setAvailableBorrowBalanceSortDirection] = React.useState<SortDirection>('desc');
+  const [availableBorrowSortKey, setAvailableBorrowSortKey] = React.useState<'apr' | 'balance'>('apr');
 
   const availableToDeposit = activeReserves.map((reserve) => {
     const balance = balancesBySymbol.get(reserve.symbol);
@@ -246,19 +254,34 @@ export default function HomeScreen() {
     return 0n;
   };
 
+  const parseDisplayNumber = (value: string) => {
+    const normalized = value.replace(/,/g, '').replace('<', '').trim();
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
   const sortedAvailableToDeposit = React.useMemo(() => {
     const items = [...availableToDeposit];
     items.sort((a, b) => {
+      if (supplySortKey === 'balance') {
+        const aAmount = parseDisplayNumber(a.amount);
+        const bAmount = parseDisplayNumber(b.amount);
+        if (aAmount === bAmount) return 0;
+        if (supplyBalanceSortDirection === 'asc') {
+          return aAmount < bAmount ? -1 : 1;
+        }
+        return aAmount > bAmount ? -1 : 1;
+      }
       const aRate = getLiquidityRate(a.liquidityRate);
       const bRate = getLiquidityRate(b.liquidityRate);
       if (aRate === bRate) return 0;
-      if (apySortDirection === 'asc') {
+      if (supplyApySortDirection === 'asc') {
         return aRate < bRate ? -1 : 1;
       }
       return aRate > bRate ? -1 : 1;
     });
     return items;
-  }, [availableToDeposit, apySortDirection]);
+  }, [availableToDeposit, supplySortKey, supplyBalanceSortDirection, supplyApySortDirection]);
 
   const getBorrowDebt = (result: unknown) => {
     if (!Array.isArray(result)) return 0n;
@@ -328,6 +351,15 @@ export default function HomeScreen() {
   const sortedDeposits = React.useMemo(() => {
     const items = [...deposits];
     items.sort((a, b) => {
+      if (depositSortKey === 'balance') {
+        const aAmount = parseDisplayNumber(a.amount);
+        const bAmount = parseDisplayNumber(b.amount);
+        if (aAmount === bAmount) return 0;
+        if (depositBalanceSortDirection === 'asc') {
+          return aAmount < bAmount ? -1 : 1;
+        }
+        return aAmount > bAmount ? -1 : 1;
+      }
       if (a.apyValue === b.apyValue) return 0;
       if (depositApySortDirection === 'asc') {
         return a.apyValue < b.apyValue ? -1 : 1;
@@ -335,7 +367,7 @@ export default function HomeScreen() {
       return a.apyValue > b.apyValue ? -1 : 1;
     });
     return items;
-  }, [deposits, depositApySortDirection]);
+  }, [deposits, depositSortKey, depositBalanceSortDirection, depositApySortDirection]);
 
   const availableToBorrow = activeReserves
     .map((reserve, index) => {
@@ -374,6 +406,15 @@ export default function HomeScreen() {
   const sortedAvailableToBorrow = React.useMemo(() => {
     const items = [...availableToBorrow];
     items.sort((a, b) => {
+      if (availableBorrowSortKey === 'balance') {
+        const aAmount = parseDisplayNumber(a.amount);
+        const bAmount = parseDisplayNumber(b.amount);
+        if (aAmount === bAmount) return 0;
+        if (availableBorrowBalanceSortDirection === 'asc') {
+          return aAmount < bAmount ? -1 : 1;
+        }
+        return aAmount > bAmount ? -1 : 1;
+      }
       if (a.aprValue === b.aprValue) return 0;
       if (availableBorrowAprSortDirection === 'asc') {
         return a.aprValue < b.aprValue ? -1 : 1;
@@ -381,7 +422,12 @@ export default function HomeScreen() {
       return a.aprValue > b.aprValue ? -1 : 1;
     });
     return items;
-  }, [availableToBorrow, availableBorrowAprSortDirection]);
+  }, [
+    availableToBorrow,
+    availableBorrowSortKey,
+    availableBorrowBalanceSortDirection,
+    availableBorrowAprSortDirection,
+  ]);
 
   const borrows = activeReserves
     .map((reserve, index) => {
@@ -407,6 +453,15 @@ export default function HomeScreen() {
   const sortedBorrows = React.useMemo(() => {
     const items = [...borrows];
     items.sort((a, b) => {
+      if (borrowSortKey === 'balance') {
+        const aAmount = parseDisplayNumber(a.amount);
+        const bAmount = parseDisplayNumber(b.amount);
+        if (aAmount === bAmount) return 0;
+        if (borrowBalanceSortDirection === 'asc') {
+          return aAmount < bAmount ? -1 : 1;
+        }
+        return aAmount > bAmount ? -1 : 1;
+      }
       if (a.aprValue === b.aprValue) return 0;
       if (borrowAprSortDirection === 'asc') {
         return a.aprValue < b.aprValue ? -1 : 1;
@@ -414,7 +469,7 @@ export default function HomeScreen() {
       return a.aprValue > b.aprValue ? -1 : 1;
     });
     return items;
-  }, [borrows, borrowAprSortDirection]);
+  }, [borrows, borrowSortKey, borrowBalanceSortDirection, borrowAprSortDirection]);
 
   const pageWidth = contentWidth || Math.max(windowWidth - 40, 0);
 
@@ -512,10 +567,22 @@ export default function HomeScreen() {
               <SupplyTab
                 sortedDeposits={sortedDeposits}
                 sortedAvailableToDeposit={sortedAvailableToDeposit}
-                onToggleDepositApySort={() =>
-                  setDepositApySortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
-                }
-                onToggleSupplyApySort={() => setApySortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+                onToggleDepositApySort={() => {
+                  setDepositSortKey('apy');
+                  setDepositApySortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+                }}
+                onToggleDepositBalanceSort={() => {
+                  setDepositSortKey('balance');
+                  setDepositBalanceSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+                }}
+                onToggleSupplyApySort={() => {
+                  setSupplySortKey('apy');
+                  setSupplyApySortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+                }}
+                onToggleSupplyBalanceSort={() => {
+                  setSupplySortKey('balance');
+                  setSupplyBalanceSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+                }}
                 themeColor={themeColor}
               />
             </View>
@@ -524,12 +591,22 @@ export default function HomeScreen() {
               <BorrowTab
                 borrows={sortedBorrows}
                 availableToBorrow={sortedAvailableToBorrow}
-                onToggleBorrowAprSort={() =>
-                  setBorrowAprSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
-                }
-                onToggleAvailableBorrowAprSort={() =>
-                  setAvailableBorrowAprSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
-                }
+                onToggleBorrowBalanceSort={() => {
+                  setBorrowSortKey('balance');
+                  setBorrowBalanceSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+                }}
+                onToggleBorrowAprSort={() => {
+                  setBorrowSortKey('apr');
+                  setBorrowAprSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+                }}
+                onToggleAvailableBorrowBalanceSort={() => {
+                  setAvailableBorrowSortKey('balance');
+                  setAvailableBorrowBalanceSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+                }}
+                onToggleAvailableBorrowAprSort={() => {
+                  setAvailableBorrowSortKey('apr');
+                  setAvailableBorrowAprSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+                }}
                 themeColor={themeColor}
               />
             </View>
