@@ -19,6 +19,7 @@ type SupplyTabProps = {
   onToggleDepositBalanceSort: () => void;
   onToggleSupplyApySort: () => void;
   onToggleSupplyBalanceSort: () => void;
+  onTokenPress: (symbol: string) => void;
   themeColor: string;
 };
 
@@ -29,6 +30,7 @@ export function SupplyTab({
   onToggleDepositBalanceSort,
   onToggleSupplyApySort,
   onToggleSupplyBalanceSort,
+  onTokenPress,
   themeColor,
 }: SupplyTabProps) {
   return (
@@ -89,7 +91,11 @@ export function SupplyTab({
         </View>
       ) : (
         sortedDeposits.map((item) => (
-          <View key={item.symbol} className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-md">
+          <Pressable
+            key={item.symbol}
+            onPress={() => onTokenPress(item.symbol)}
+            className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-md"
+          >
             <View className="flex-row items-center gap-3">
               <View className="h-11 w-11 rounded-full items-center justify-center" style={{ backgroundColor: `${item.color}22` }}>
                 <TokenIcon symbol={item.symbol} size={28} />
@@ -107,7 +113,7 @@ export function SupplyTab({
                 <Text className="text-sm font-bold text-white">{formatAPY(item.liquidityRate)}</Text>
               </View>
             </View>
-          </View>
+          </Pressable>
         ))
       )}
 
@@ -162,7 +168,11 @@ export function SupplyTab({
 
       </View>
       {sortedAvailableToDeposit.map((item) => (
-        <View key={item.symbol} className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-md">
+        <Pressable
+          key={item.symbol}
+          onPress={() => onTokenPress(item.symbol)}
+          className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-md"
+        >
           <View className="flex-row items-center gap-3">
             <View className="h-11 w-11 rounded-full items-center justify-center" style={{ backgroundColor: `${item.color}22` }}>
               <TokenIcon symbol={item.symbol} size={28} />
@@ -183,7 +193,7 @@ export function SupplyTab({
           </View>
 
          
-        </View>
+        </Pressable>
       ))}
     </View>
   );

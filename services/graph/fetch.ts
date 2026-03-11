@@ -11,6 +11,16 @@ export interface Reserve {
   symbol: string;
   name: string;
   underlyingAsset: string;
+  totalLiquidity: string;
+  availableLiquidity: string;
+  utilizationRate: string;
+  totalSupplies: string;
+  baseLTVasCollateral: string;
+  reserveLiquidationThreshold: string;
+  reserveLiquidationBonus: string;
+  totalPrincipalStableDebt: string;
+  totalCurrentVariableDebt: string;
+  reserveFactor: string;
   liquidityRate: string;
   usageAsCollateralEnabled: boolean;
   reserveInterestRateStrategy: string;
@@ -52,6 +62,16 @@ const RESERVES_QUERY = gql`
       symbol
       name
       underlyingAsset
+      totalLiquidity
+      availableLiquidity
+      utilizationRate
+      totalSupplies
+      baseLTVasCollateral
+      reserveLiquidationThreshold
+      reserveLiquidationBonus
+      totalPrincipalStableDebt
+      totalCurrentVariableDebt
+      reserveFactor
       liquidityRate
       variableBorrowRate
       stableBorrowRate
@@ -165,4 +185,3 @@ export async function fetchReserveAprHistory(options: {
     })
     .reverse();
 }
-

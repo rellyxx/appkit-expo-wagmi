@@ -26,6 +26,7 @@ type BorrowTabProps = {
   onToggleBorrowAprSort: () => void;
   onToggleAvailableBorrowBalanceSort: () => void;
   onToggleAvailableBorrowAprSort: () => void;
+  onTokenPress: (symbol: string) => void;
   themeColor: string;
 };
 
@@ -36,6 +37,7 @@ export function BorrowTab({
   onToggleBorrowAprSort,
   onToggleAvailableBorrowBalanceSort,
   onToggleAvailableBorrowAprSort,
+  onTokenPress,
   themeColor,
 }: BorrowTabProps) {
   return (
@@ -97,7 +99,11 @@ export function BorrowTab({
         </View>
       ) : (
         borrows.map((item) => (
-          <View key={item.symbol} className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-md">
+          <Pressable
+            key={item.symbol}
+            onPress={() => onTokenPress(item.symbol)}
+            className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-md"
+          >
             <View className="flex-row items-center gap-3">
               <View className="h-11 w-11 rounded-full items-center justify-center" style={{ backgroundColor: `${item.color}22` }}>
                 <TokenIcon symbol={item.symbol} size={28} />
@@ -115,7 +121,7 @@ export function BorrowTab({
                 <Text className="text-sm font-bold text-white">{item.apr}</Text>
               </View>
             </View>
-          </View>
+          </Pressable>
         ))
       )}
 
@@ -171,7 +177,11 @@ export function BorrowTab({
       </View>
 
       {availableToBorrow.map((item) => (
-        <View key={item.symbol} className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-md">
+        <Pressable
+          key={item.symbol}
+          onPress={() => onTokenPress(item.symbol)}
+          className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-md"
+        >
           <View className="flex-row items-center gap-3">
             <View className="h-11 w-11 rounded-full items-center justify-center" style={{ backgroundColor: `${item.color}22` }}>
               <TokenIcon symbol={item.symbol} size={28} />
@@ -189,7 +199,7 @@ export function BorrowTab({
               <Text className="text-sm font-bold text-white">{item.apr}</Text>
             </View>
           </View>
-        </View>
+        </Pressable>
       ))}
     </View>
   );

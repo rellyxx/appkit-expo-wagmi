@@ -1,6 +1,7 @@
 import '@walletconnect/react-native-compat';
 import React from 'react';
 import { View, Text, Pressable, ScrollView, useWindowDimensions, PanResponder } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DashboardHeader, DASHBOARD_HEADER_HEIGHT } from '@/components/DashboardHeader';
 import { themeColor } from '@/constants/Colors';
@@ -15,6 +16,7 @@ import deployedContracts from '@/contracts/deployedContracts';
 type SortDirection = 'asc' | 'desc';
 
 export default function HomeScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const [activeTab, setActiveTab] = React.useState(0);
@@ -471,6 +473,12 @@ export default function HomeScreen() {
   }, [borrows, borrowSortKey, borrowBalanceSortDirection, borrowAprSortDirection]);
 
   const pageWidth = contentWidth || Math.max(windowWidth - 40, 0);
+  const handleTokenPress = React.useCallback((symbol: string) => {
+    router.push({
+      pathname: '/token/[symbol]',
+      params: { symbol },
+    });
+  }, [router]);
 
   const handleTabPress = React.useCallback((index: number) => {
     setActiveTab(index);
@@ -582,6 +590,7 @@ export default function HomeScreen() {
                   setSupplySortKey('balance');
                   setSupplyBalanceSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
                 }}
+                onTokenPress={handleTokenPress}
                 themeColor={themeColor}
               />
             </View>
@@ -606,6 +615,7 @@ export default function HomeScreen() {
                   setAvailableBorrowSortKey('apr');
                   setAvailableBorrowAprSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
                 }}
+                onTokenPress={handleTokenPress}
                 themeColor={themeColor}
               />
             </View>
