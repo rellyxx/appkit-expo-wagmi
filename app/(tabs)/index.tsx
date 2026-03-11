@@ -7,8 +7,10 @@ import { themeColor } from '@/constants/Colors';
 import { useGlobalState } from '@/store/useGlobalState';
 import { useAccount, useReadContracts } from 'wagmi';
 import { erc20Abi, formatUnits } from 'viem';
-import { formatAPY } from '@/utils/common';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { BorrowTab } from './BorrowTab';
+import { SupplyTab } from './SupplyTab';
+
+type SortDirection = 'asc' | 'desc';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -96,13 +98,13 @@ export default function HomeScreen() {
     return map;
   }, [activeReserves, balanceResults]);
 
-  const [apySortDirection, setApySortDirection] = React.useState<'asc' | 'desc'>('desc');
-  const [depositApySortDirection, setDepositApySortDirection] = React.useState<'asc' | 'desc'>('desc');
+  const [apySortDirection, setApySortDirection] = React.useState<SortDirection>('desc');
+  const [depositApySortDirection, setDepositApySortDirection] = React.useState<SortDirection>('desc');
 
   const availableToDeposit = activeReserves.map((reserve) => {
     const balance = balancesBySymbol.get(reserve.symbol);
     return {
-      liquidityRate: reserve.liquidityRate,
+      liquidityRate: reserve.liquidityRate?.toString() ?? '0',
       symbol: reserve.symbol,
       name: reserve.name,
       amount: balance ? `${balance} ${reserve.symbol}` : `0 ${reserve.symbol}`,
@@ -268,7 +270,7 @@ export default function HomeScreen() {
               className={`text-sm ${activeTab === 0 ? 'font-bold' : 'font-semibold text-[#6B7280]'}`}
               style={activeTab === 0 ? { color: themeColor } : undefined}
             >
-              Deposit
+              Supply
             </Text>
           </Pressable>
           <Pressable
@@ -297,157 +299,20 @@ export default function HomeScreen() {
             scrollEnabled={false}
             contentContainerStyle={{ width: pageWidth * 2 }}
           >
-            <View style={{ width: pageWidth }} className="gap-4">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-bold text-[#111827]">Your supplies</Text>
-                <Pressable
-                  className="flex-row items-center gap-1 rounded px-2 py-1 h-10"
-                  onPress={() =>
-                    setDepositApySortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
-                  }
-                  style={({ pressed }) => [
-                    pressed
-                      ? {
-                          opacity: 0.75,
-                          transform: [{ scale: 0.94 }],
-                          backgroundColor: 'rgba(17,24,39,0.1)',
-                        }
-                      : null,
-                  ]}
-                >
-                  {({ pressed }) => (
-                    <>
-                      <Text
-                        className="text-xs font-semibold"
-                        style={{ color: pressed ? themeColor : '#9CA3AF' }}
-                      >
-                        APY (%)
-                      </Text>
-                      <FontAwesome
-                        name="sort"
-                        size={12}
-                        color={pressed ? themeColor : '#9CA3AF'}
-                      />
-                    </>
-                  )}
-                </Pressable>
-              </View>
-
-              {sortedDeposits.length === 0 ? (
-                <View className="bg-white rounded-2xl p-4 shadow-md">
-                  <Text className="text-[13px] text-[#6B7280]">No supplied assets yet</Text>
-                </View>
-              ) : (
-                sortedDeposits.map((item) => (
-                  <View key={item.symbol} className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-md">
-                    <View className="flex-row items-center gap-3">
-                      <View className="h-11 w-11 rounded-full items-center justify-center" style={{ backgroundColor: `${item.color}22` }}>
-                        <Text className="text-lg font-bold" style={{ color: item.color }}>{item.icon}</Text>
-                      </View>
-                      <View>
-                        <Text className="text-base font-bold text-[#111827]">{item.symbol}</Text>
-                        <Text className="text-[13px] text-[#6B7280] mt-0.5">{item.amount}</Text>
-                      </View>
-                    </View>
-                    <View className="items-end gap-1">
-                      <Text className="text-sm font-bold text-[#16A34A]">{item.apy}</Text>
-                    </View>
-                  </View>
-                ))
-              )}
-
-              <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-bold text-[#111827]">Assets to supply</Text>
-                <Pressable
-                  className="flex-row items-center gap-1 rounded px-2 py-1 h-10"
-                  onPress={() =>
-                    setApySortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
-                  }
-                  style={({ pressed }) => [
-                    pressed
-                      ? {
-                          opacity: 0.75,
-                          transform: [{ scale: 0.94 }],
-                          backgroundColor: 'rgba(17,24,39,0.1)',
-                        }
-                      : null,
-                  ]}
-                >
-                  {({ pressed }) => (
-                    <>
-                      <Text
-                        className="text-xs font-semibold"
-                        style={{ color: pressed ? themeColor : '#9CA3AF' }}
-                      >
-                        APY (%)
-                      </Text>
-                      <FontAwesome
-                        name="sort"
-                        size={12}
-                        color={pressed ? themeColor : '#9CA3AF'}
-                      />
-                    </>
-                  )}
-                </Pressable>
-              </View>
-              {sortedAvailableToDeposit.map((item) => (
-                <View key={item.symbol} className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-md">
-                  <View className="flex-row items-center gap-3">
-                    <View className="h-11 w-11 rounded-full items-center justify-center" style={{ backgroundColor: `${item.color}22` }}>
-                      <Text className="text-lg font-bold" style={{ color: item.color }}>{item.icon}</Text>
-                    </View>
-                    <View>
-                      <Text className="text-base font-bold text-[#111827]">{item.symbol}</Text>
-                      <Text className="text-[13px] text-[#6B7280] mt-0.5">balance: {item.amount}</Text>
-                    </View>
-                  </View>
-                  <Text className="text-sm font-bold text-[#16A34A]">{formatAPY(item.liquidityRate)}</Text>
-                </View>
-              ))}
+            <View style={{ width: pageWidth }}>
+              <SupplyTab
+                sortedDeposits={sortedDeposits}
+                sortedAvailableToDeposit={sortedAvailableToDeposit}
+                onToggleDepositApySort={() =>
+                  setDepositApySortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+                }
+                onToggleSupplyApySort={() => setApySortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+                themeColor={themeColor}
+              />
             </View>
 
-            <View style={{ width: pageWidth }} className="gap-4">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-bold text-[#111827]">My Borrows</Text>
-                <Text className="text-xs font-semibold text-[#9CA3AF]">APR (%)</Text>
-              </View>
-
-              {borrows.map((item) => (
-                <View key={item.symbol} className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-md">
-                  <View className="flex-row items-center gap-3">
-                    <View className="h-11 w-11 rounded-full items-center justify-center" style={{ backgroundColor: `${item.color}22` }}>
-                      <Text className="text-lg font-bold" style={{ color: item.color }}>{item.icon}</Text>
-                    </View>
-                    <View>
-                      <Text className="text-base font-bold text-[#111827]">{item.symbol}</Text>
-                      <Text className="text-[13px] text-[#6B7280] mt-0.5">{item.amount}</Text>
-                    </View>
-                  </View>
-                  <View className="items-end gap-1">
-                    <Text className="text-sm font-bold text-[#DC2626]">{item.apr}</Text>
-                    <Text className="text-[13px] text-[#6B7280]">{item.value}</Text>
-                  </View>
-                </View>
-              ))}
-
-              <Text className="mt-1.5 text-base font-bold text-[#111827]">Available to Borrow</Text>
-
-              {availableToBorrow.map((item) => (
-                <View key={item.symbol} className="bg-white rounded-2xl p-4 flex-row items-center justify-between shadow-md">
-                  <View className="flex-row items-center gap-3">
-                    <View className="h-11 w-11 rounded-full items-center justify-center" style={{ backgroundColor: `${item.color}22` }}>
-                      <Text className="text-lg font-bold" style={{ color: item.color }}>{item.icon}</Text>
-                    </View>
-                    <View>
-                      <Text className="text-base font-bold text-[#111827]">{item.symbol}</Text>
-                      <Text className="text-[13px] text-[#6B7280] mt-0.5">{item.amount}</Text>
-                    </View>
-                  </View>
-                  <Pressable className="px-4 py-2 rounded-xl" style={{ backgroundColor: themeColor }}>
-                    <Text className="text-[13px] font-bold text-white">Borrow</Text>
-                  </Pressable>
-                </View>
-              ))}
+            <View style={{ width: pageWidth }}>
+              <BorrowTab borrows={borrows} availableToBorrow={availableToBorrow} themeColor={themeColor} />
             </View>
           </ScrollView>
         </View>
