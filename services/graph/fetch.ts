@@ -29,6 +29,13 @@ export interface Reserve {
   isDropped: boolean;
   stableBorrowRate: string;
   variableBorrowRate: string;
+  totalBTokenSupply: string;
+  variableRateSlope1: string;
+  variableRateSlope2: string;
+  optimalUtilisationRate: string;
+  stableRateSlope1: string;
+  stableRateSlope2: string;
+  baseVariableBorrowRate: string;
   bToken: {
     id: string;
   };
