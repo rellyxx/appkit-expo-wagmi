@@ -161,16 +161,19 @@ export function TokenActionPanel({
   const actionBalanceValue = actionBalanceValueMap[actionType];
   const actionInfoItems = actionInfoMap[actionType];
   const hasInputAmount = actionAmount.trim().length > 0;
-  const healthFactorNumber = displayHealthFactor === '∞'
-    ? Number.POSITIVE_INFINITY
-    : Number(displayHealthFactor.replace('<', ''));
-  const healthFactorColor = Number.isFinite(healthFactorNumber)
-    ? healthFactorNumber >= 2
-      ? colors.success
-      : healthFactorNumber >= 1.2
-        ? colors.accent
-        : colors.danger
-    : colors.textSecondary;
+  const parseHealthFactorNumber = (value: string) => {
+    if (value === '∞') return Number.POSITIVE_INFINITY;
+    return Number(value.replace('<', ''));
+  };
+  const getHealthFactorColor = (value: string) => {
+    const healthNumber = parseHealthFactorNumber(value);
+    if (!Number.isFinite(healthNumber)) return colors.textSecondary;
+    if (healthNumber >= 2) return colors.success;
+    if (healthNumber >= 1.2) return colors.accent;
+    return colors.danger;
+  };
+  const healthFactorColor = getHealthFactorColor(displayHealthFactor);
+  const originalHealthFactorColor = getHealthFactorColor(healthFactor);
 
   return (
     <View className="rounded-3xl p-4" style={{ backgroundColor: colors.cardBg }}>
@@ -233,12 +236,12 @@ export function TokenActionPanel({
               <Text className="text-xs" style={{ color: colors.textSecondary }}>{item.label}</Text>
               {item.label === 'Health factor' ? (
                 hasInputAmount ? (
-                  <Text className="text-base font-bold mt-1" style={{ color: colors.textPrimary }}>
+                  <Text className="text-base font-bold mt-1" style={{ color: originalHealthFactorColor }}>
                     {healthFactor}
                     <Text style={{ color: healthFactorColor }}> → {item.value}</Text>
                   </Text>
                 ) : (
-                  <Text className="text-base font-bold mt-1" style={{ color: colors.textPrimary }}>
+                  <Text className="text-base font-bold mt-1" style={{ color: originalHealthFactorColor }}>
                     {healthFactor}
                   </Text>
                 )
