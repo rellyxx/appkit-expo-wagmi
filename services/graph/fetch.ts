@@ -15,6 +15,8 @@ export interface Reserve {
   availableLiquidity: string;
   utilizationRate: string;
   totalSupplies: string;
+  supplyCap: string;
+  borrowCap: string;
   baseLTVasCollateral: string;
   reserveLiquidationThreshold: string;
   reserveLiquidationBonus: string;
@@ -74,10 +76,20 @@ const RESERVES_QUERY = gql`
       reserveFactor
       liquidityRate
       variableBorrowRate
+      supplyCap
+      borrowCap
       stableBorrowRate
       usageAsCollateralEnabled
       reserveInterestRateStrategy
       isDropped
+      totalBTokenSupply
+              utilizationRate
+              variableRateSlope1
+              variableRateSlope2
+              optimalUtilisationRate
+              stableRateSlope1
+              stableRateSlope2
+              baseVariableBorrowRate
       bToken {
         id
       }

@@ -1,14 +1,18 @@
 import React from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, type Href } from 'expo-router';
 import BigNumberJs from 'bignumber.js';
-import { formatUnits } from 'viem';
+import { formatUnits, type Abi } from 'viem';
 import Svg, { Circle, Line, Polyline } from 'react-native-svg';
 import { TokenIcon } from '@/components/TokenIcon';
+import { ExternalLink } from '@/components/ExternalLink';
 import { useGlobalState } from '@/store/useGlobalState';
 import { useAppearanceState } from '@/store/useAppearanceState';
 import { fetchReserveAprHistory, type ReserveAprPoint } from '@/services/graph/fetch';
 import { AppTheme } from '@/constants/AppTheme';
+import { useReadContracts } from 'wagmi';
+import bTokenAbi from '@/contracts/IBTokenABI.json';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 function normalizeSymbol(symbol?: string | string[]) {
   if (Array.isArray(symbol)) return symbol[0] ?? '';
@@ -29,16 +33,16 @@ function formatAmount(raw: string | undefined, decimals: number) {
 }
 
 function formatOraclePrice(priceInEth?: string) {
-  if (!priceInEth) return '0';
+  if (!priceInEth) return '0.00';
   try {
     const value = priceInEth.includes('.')
       ? new BigNumberJs(priceInEth)
       : new BigNumberJs(formatUnits(BigInt(priceInEth), 8));
-    if (!value.isFinite()) return '0';
-    if (value.gt(0) && value.lt(0.0001)) return '<0.0001';
-    return value.toFormat(6);
+    if (!value.isFinite()) return '0.00';
+    if (value.gt(0) && value.lt(0.01)) return '0.00';
+    return value.toFormat(2);
   } catch {
-    return '0';
+    return '0.00';
   }
 }
 
@@ -64,6 +68,47 @@ function formatCompactNumber(raw: string | undefined, decimals: number) {
   if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(2)}M`;
   if (amount >= 1_000) return `${(amount / 1_000).toFixed(2)}K`;
   return amount.toFixed(2);
+}
+
+function formatCompactTokenAmount(amount: BigNumberJs) {
+  if (!amount.isFinite()) return '0';
+  if (amount.gte(1_000_000_000)) return `${amount.div(1_000_000_000).toFormat(2)}B`;
+  if (amount.gte(1_000_000)) return `${amount.div(1_000_000).toFormat(2)}M`;
+  if (amount.gte(1_000)) return `${amount.div(1_000).toFormat(2)}K`;
+  return amount.toFormat(2);
+}
+
+function formatCompactUsdValue(raw: string | undefined, decimals: number, priceInEth?: string) {
+  if (!raw || !priceInEth) return '0.00';
+  try {
+    const tokenAmount = new BigNumberJs(formatUnits(BigInt(raw), decimals));
+    const price = priceInEth.includes('.')
+      ? new BigNumberJs(priceInEth)
+      : new BigNumberJs(formatUnits(BigInt(priceInEth), 8));
+    if (!tokenAmount.isFinite() || !price.isFinite()) return '0.00';
+    const value = tokenAmount.times(price);
+    if (!value.isFinite() || value.isNaN()) return '0.00';
+    if (value.gt(0) && value.lt(0.01)) return '0.00';
+    return value.toFormat(2);
+  } catch {
+    return '0.00';
+  }
+}
+
+function formatCompactUsdValueFromTokens(tokenAmount: BigNumberJs, priceInEth?: string) {
+  if (!priceInEth) return '0.00';
+  try {
+    const price = priceInEth.includes('.')
+      ? new BigNumberJs(priceInEth)
+      : new BigNumberJs(formatUnits(BigInt(priceInEth), 8));
+    if (!tokenAmount.isFinite() || !price.isFinite()) return '0.00';
+    const value = tokenAmount.times(price);
+    if (!value.isFinite() || value.isNaN()) return '0.00';
+    if (value.gt(0) && value.lt(0.01)) return '0.00';
+    return value.toFormat(2);
+  } catch {
+    return '0.00';
+  }
 }
 
 function buildLinePoints({
@@ -110,6 +155,12 @@ function buildLinePointsFromValues(values: number[], width: number, height: numb
   });
   return points.join(' ');
 }
+
+const EXPLORER_BASE_BY_CHAIN: Record<number, string> = {
+  56: 'https://bscscan.com',
+  97: 'https://testnet.bscscan.com',
+  688689: 'https://atlantic.pharosscan.xyz',
+};
 
 function formatShortDate(timestamp?: number) {
   if (!timestamp) return '-';
@@ -204,6 +255,51 @@ export default function TokenDetailScreen() {
   const [range, setRange] = React.useState<'1w' | '1m' | '6m' | '1y'>('1w');
   const [aprHistory, setAprHistory] = React.useState<ReserveAprPoint[]>([]);
 
+  const collectorContracts = React.useMemo(
+    () =>
+      reserve?.bToken?.id
+        ? [
+            {
+              address: reserve.bToken.id as `0x${string}`,
+              abi: bTokenAbi as Abi,
+              functionName: 'RESERVE_TREASURY_ADDRESS' as const,
+              chainId,
+            },
+          ]
+        : [],
+    [reserve?.bToken?.id, chainId],
+  );
+
+  const { data: collectorResults } = useReadContracts({
+    contracts: collectorContracts,
+    query: { enabled: collectorContracts.length > 0 },
+  });
+
+  const collectorAddress = React.useMemo(() => {
+    const result = collectorResults?.[0];
+    if (result?.status !== 'success') return undefined;
+    return typeof result.result === 'string' ? result.result : undefined;
+  }, [collectorResults]);
+
+  const collectorExplorerUrl = React.useMemo<string | undefined>(() => {
+    if (!collectorAddress || !chainId) return undefined;
+    const baseUrl = EXPLORER_BASE_BY_CHAIN[chainId];
+    if (!baseUrl) return undefined;
+    const normalizedBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    return `${normalizedBase}/address/${collectorAddress}`;
+  }, [collectorAddress, chainId]);
+
+  const supplyCapTokens = React.useMemo(
+    () => new BigNumberJs(reserve?.supplyCap ?? '0'),
+    [reserve?.supplyCap],
+  );
+  const borrowCapTokens = React.useMemo(
+    () => new BigNumberJs(reserve?.borrowCap ?? '0'),
+    [reserve?.borrowCap],
+  );
+  const isSupplyCapZero = supplyCapTokens.isZero();
+  const isBorrowCapZero = borrowCapTokens.isZero();
+
   React.useEffect(() => {
     let active = true;
     const rangeToSeconds: Record<'1w' | '1m' | '6m' | '1y', number> = {
@@ -249,6 +345,16 @@ export default function TokenDetailScreen() {
   const liquidationPenalty = Math.max(Number(reserve.reserveLiquidationBonus ?? '0') - 10000, 0).toString();
   const utilization = Number(reserve.utilizationRate ?? '0');
   const utilizationRatePercent = Number.isFinite(utilization) ? (utilization <= 1 ? utilization * 100 : utilization) : 0;
+  const totalSuppliesTokens = new BigNumberJs(formatUnits(BigInt(reserve.totalSupplies ?? '0'), decimals));
+  const totalBorrowedTokens = new BigNumberJs(formatUnits(BigInt(totalBorrowed), decimals));
+  const supplyCapRatio = isSupplyCapZero
+    ? new BigNumberJs(0)
+    : totalSuppliesTokens.dividedBy(supplyCapTokens).times(100);
+  const borrowCapRatio = isBorrowCapZero
+    ? new BigNumberJs(0)
+    : totalBorrowedTokens.dividedBy(borrowCapTokens).times(100);
+  const supplyCapRatioPercent = supplyCapRatio.isFinite() ? supplyCapRatio.toNumber() : 0;
+  const borrowCapRatioPercent = borrowCapRatio.isFinite() ? borrowCapRatio.toNumber() : 0;
   const supplyApy = Number(formatUnits(BigInt(reserve.liquidityRate ?? '0'), 27)) * 100;
   const borrowApy = Number(formatUnits(BigInt(reserve.variableBorrowRate ?? '0'), 27)) * 100;
   const historyForChart = aprHistory.length > 1
@@ -288,8 +394,8 @@ export default function TokenDetailScreen() {
   });
 
   const metrics = [
-    { label: 'Reserve Size', value: `$ ${formatCompactNumber(reserve.totalLiquidity, decimals)}` },
-    { label: 'Available liquidity', value: `$ ${formatCompactNumber(reserve.availableLiquidity, decimals)}` },
+    { label: 'Reserve Size', value: `$ ${formatCompactUsdValue(reserve.totalLiquidity, decimals, reserve.price?.priceInEth)}` },
+    { label: 'Available liquidity', value: `$ ${formatCompactUsdValue(reserve.availableLiquidity, decimals, reserve.price?.priceInEth)}` },
     { label: 'Utilization Rate', value: formatPercentFromDecimal(reserve.utilizationRate) },
     { label: 'Oracle price', value: `$ ${formatOraclePrice(reserve.price?.priceInEth)}` },
   ];
@@ -298,35 +404,35 @@ export default function TokenDetailScreen() {
     <View className="flex-1" style={{ backgroundColor: colors.pageBg }}>
       <Stack.Screen options={{ title: `${reserve.symbol} Detail`, headerStyle: { backgroundColor: colors.pageBg } }} />
       <ScrollView contentContainerClassName="px-4 py-5 gap-3.5 pb-10" showsVerticalScrollIndicator={false}>
-        <View className="rounded-3xl p-4 border" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+        <View className="rounded-3xl p-4" style={{ backgroundColor: colors.cardBg}}>
           <View className="flex-row items-center gap-3">
             <TokenIcon symbol={reserve.symbol} size={36} />
             <View className="flex-1">
               <Text className="text-sm" style={{ color: colors.textSecondary }}>{reserve.symbol}</Text>
-              <Text className="text-[28px] leading-8 font-bold" style={{ color: colors.textPrimary }}>{reserve.name}</Text>
+              <Text className="text-[18px] leading-8 font-bold" style={{ color: colors.textPrimary }}>{reserve.name}</Text>
             </View>
           </View>
           <View className="flex-row flex-wrap mt-3">
             {metrics.map((item) => (
               <View key={item.label} className="w-1/2 mt-3 pr-2">
-                <Text className="text-sm" style={{ color: colors.textSecondary }}>{item.label}</Text>
+                <Text className="text-base" style={{ color: colors.textSecondary }}>{item.label}</Text>
                 <Text className="text-[19px] leading-6 font-bold mt-0.5" style={{ color: colors.textPrimary }}>{item.value}</Text>
               </View>
             ))}
           </View>
         </View>
 
-        <View className="rounded-3xl p-4 border" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
-          <Text className="text-2xl font-bold" style={{ color: colors.textPrimary }}>Supply Info</Text>
+        <View className="rounded-3xl p-4 " style={{ backgroundColor: colors.cardBg}}>
+          <Text className="text-xl font-bold" style={{ color: colors.textPrimary }}>Supply Info</Text>
           <View className="flex-row items-center mt-3">
-            <ProgressRing percent={utilizationRatePercent} isDark={isDark} />
+            <ProgressRing percent={supplyCapRatioPercent} isDark={isDark} />
             <View className="ml-3 flex-1">
-              <Text className="text-sm" style={{ color: colors.textSecondary }}>Total supplied</Text>
+              <Text className="text-BASE" style={{ color: colors.textSecondary }}>Total supplied</Text>
               <Text className="text-[18px] leading-6 font-bold" style={{ color: colors.textPrimary }}>
-                {formatCompactNumber(reserve.totalSupplies, decimals)} of {formatCompactNumber(reserve.totalLiquidity, decimals)}
+                {formatCompactNumber(reserve.totalSupplies, decimals)} of {isSupplyCapZero ? '∞' : formatCompactTokenAmount(supplyCapTokens)}
               </Text>
               <Text className="text-sm mt-0.5" style={{ color: colors.textSecondary }}>
-                $ {formatCompactNumber(reserve.totalSupplies, decimals)} of $ {formatCompactNumber(reserve.totalLiquidity, decimals)}
+                $ {formatCompactUsdValue(reserve.totalSupplies, decimals, reserve.price?.priceInEth)} of $ {isSupplyCapZero ? '∞' : formatCompactUsdValueFromTokens(supplyCapTokens, reserve.price?.priceInEth)}
               </Text>
             </View>
             <View className="ml-2">
@@ -338,16 +444,16 @@ export default function TokenDetailScreen() {
             <View className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: colors.cyan }} />
             <Text className="text-sm ml-2" style={{ color: colors.textSecondary }}>Supply APR</Text>
             <View className="ml-auto flex-row rounded-xl overflow-hidden" style={{ backgroundColor: colors.cardAltBg }}>
-              <Pressable onPress={() => setRange('1w')} className="px-3 py-1.5" style={{ backgroundColor: range === '1w' ? colors.cardBg : 'transparent' }}>
+              <Pressable onPress={() => setRange('1w')} className="px-3 py-1.5" style={{ backgroundColor: range === '1w' ? colors.accent : 'transparent' }}>
                 <Text className="text-sm font-semibold" style={{ color: range === '1w' ? colors.textPrimary : colors.textSecondary }}>1w</Text>
               </Pressable>
-              <Pressable onPress={() => setRange('1m')} className="px-3 py-1.5" style={{ backgroundColor: range === '1m' ? colors.cardBg : 'transparent' }}>
+              <Pressable onPress={() => setRange('1m')} className="px-3 py-1.5" style={{ backgroundColor: range === '1m' ? colors.accent : 'transparent' }}>
                 <Text className="text-sm font-semibold" style={{ color: range === '1m' ? colors.textPrimary : colors.textSecondary }}>1m</Text>
               </Pressable>
-              <Pressable onPress={() => setRange('6m')} className="px-3 py-1.5" style={{ backgroundColor: range === '6m' ? colors.cardBg : 'transparent' }}>
+              <Pressable onPress={() => setRange('6m')} className="px-3 py-1.5" style={{ backgroundColor: range === '6m' ? colors.accent : 'transparent' }}>
                 <Text className="text-sm font-semibold" style={{ color: range === '6m' ? colors.textPrimary : colors.textSecondary }}>6m</Text>
               </Pressable>
-              <Pressable onPress={() => setRange('1y')} className="px-3 py-1.5" style={{ backgroundColor: range === '1y' ? colors.cardBg : 'transparent' }}>
+              <Pressable onPress={() => setRange('1y')} className="px-3 py-1.5" style={{ backgroundColor: range === '1y' ? colors.accent : 'transparent' }}>
                 <Text className="text-sm font-semibold" style={{ color: range === '1y' ? colors.textPrimary : colors.textSecondary }}>1y</Text>
               </Pressable>
             </View>
@@ -355,8 +461,8 @@ export default function TokenDetailScreen() {
           <PlaceholderChart lineColor={colors.cyan} avgLabel={`Avg ${supplyAvg.toFixed(2)}%`} points={supplyLinePoints} xLabels={xLabels} isDark={isDark} />
         </View>
 
-        <View className="rounded-3xl p-4 border" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
-          <Text className="text-2xl font-bold" style={{ color: colors.textPrimary }}>Collateral usage</Text>
+        <View className="rounded-3xl p-4 " style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+          <Text className="text-xl font-bold" style={{ color: colors.textPrimary }}>Collateral usage</Text>
           <Text className="text-sm font-semibold mt-1.5" style={{ color: colors.success }}>Can be collateral</Text>
           <View className="flex-row gap-2.5 mt-3">
             <View className="flex-1 border rounded-2xl p-4" style={{ borderColor: colors.border }}>
@@ -374,17 +480,17 @@ export default function TokenDetailScreen() {
           </View>
         </View>
 
-        <View className="rounded-3xl p-4 border" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
-          <Text className="text-2xl font-bold" style={{ color: colors.textPrimary }}>Borrow info</Text>
+        <View className="rounded-3xl p-4 " style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+          <Text className="text-xl font-bold" style={{ color: colors.textPrimary }}>Borrow info</Text>
           <View className="flex-row items-center mt-3">
-            <ProgressRing percent={utilizationRatePercent} isDark={isDark} />
+            <ProgressRing percent={borrowCapRatioPercent} isDark={isDark} />
             <View className="ml-3 flex-1">
               <Text className="text-sm" style={{ color: colors.textSecondary }}>Total borrowed</Text>
               <Text className="text-[18px] leading-6 font-bold" style={{ color: colors.textPrimary }}>
-                {formatCompactNumber(totalBorrowed, decimals)} of {formatCompactNumber(reserve.totalLiquidity, decimals)}
+                {formatCompactNumber(totalBorrowed, decimals)} of {isBorrowCapZero ? '∞' : formatCompactTokenAmount(borrowCapTokens)}
               </Text>
               <Text className="text-sm mt-0.5" style={{ color: colors.textSecondary }}>
-                $ {formatCompactNumber(totalBorrowed, decimals)} of $ {formatCompactNumber(reserve.totalLiquidity, decimals)}
+                $ {formatCompactUsdValue(totalBorrowed, decimals, reserve.price?.priceInEth)} of $ {isBorrowCapZero ? '∞' : formatCompactUsdValueFromTokens(borrowCapTokens, reserve.price?.priceInEth)}
               </Text>
             </View>
             <View className="ml-2">
@@ -396,16 +502,16 @@ export default function TokenDetailScreen() {
             <View className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: colors.purple }} />
             <Text className="text-sm ml-2" style={{ color: colors.textSecondary }}>Borrow APR, variable</Text>
             <View className="ml-auto flex-row rounded-xl overflow-hidden" style={{ backgroundColor: colors.cardAltBg }}>
-              <Pressable onPress={() => setRange('1w')} className="px-3 py-1.5" style={{ backgroundColor: range === '1w' ? colors.cardBg : 'transparent' }}>
+              <Pressable onPress={() => setRange('1w')} className="px-3 py-1.5" style={{ backgroundColor: range === '1w' ? colors.accent : 'transparent' }}>
                 <Text className="text-sm font-semibold" style={{ color: range === '1w' ? colors.textPrimary : colors.textSecondary }}>1w</Text>
               </Pressable>
-              <Pressable onPress={() => setRange('1m')} className="px-3 py-1.5" style={{ backgroundColor: range === '1m' ? colors.cardBg : 'transparent' }}>
+              <Pressable onPress={() => setRange('1m')} className="px-3 py-1.5" style={{ backgroundColor: range === '1m' ? colors.accent : 'transparent' }}>
                 <Text className="text-sm font-semibold" style={{ color: range === '1m' ? colors.textPrimary : colors.textSecondary }}>1m</Text>
               </Pressable>
-              <Pressable onPress={() => setRange('6m')} className="px-3 py-1.5" style={{ backgroundColor: range === '6m' ? colors.cardBg : 'transparent' }}>
+              <Pressable onPress={() => setRange('6m')} className="px-3 py-1.5" style={{ backgroundColor: range === '6m' ? colors.accent : 'transparent' }}>
                 <Text className="text-sm font-semibold" style={{ color: range === '6m' ? colors.textPrimary : colors.textSecondary }}>6m</Text>
               </Pressable>
-              <Pressable onPress={() => setRange('1y')} className="px-3 py-1.5" style={{ backgroundColor: range === '1y' ? colors.cardBg : 'transparent' }}>
+              <Pressable onPress={() => setRange('1y')} className="px-3 py-1.5" style={{ backgroundColor: range === '1y' ? colors.accent : 'transparent' }}>
                 <Text className="text-sm font-semibold" style={{ color: range === '1y' ? colors.textPrimary : colors.textSecondary }}>1y</Text>
               </Pressable>
             </View>
@@ -413,21 +519,36 @@ export default function TokenDetailScreen() {
           <PlaceholderChart lineColor={colors.purple} avgLabel={`Avg ${borrowAvg.toFixed(2)}%`} points={borrowLinePoints} xLabels={xLabels} isDark={isDark} />
         </View>
 
-        <View className="rounded-3xl p-4 border" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
-          <Text className="text-2xl font-bold" style={{ color: colors.textPrimary }}>Collector Info</Text>
+        <View className="rounded-3xl p-4" style={{ backgroundColor: colors.cardBg }}>
+          <Text className="text-xl font-bold" style={{ color: colors.textPrimary }}>Collector Info</Text>
           <View className="flex-row mt-3 gap-2.5">
             <View className="flex-1 border rounded-2xl p-4" style={{ borderColor: colors.border }}>
               <Text className="text-sm" style={{ color: colors.textSecondary }}>Reserve factor</Text>
               <Text className="text-lg font-bold mt-1.5" style={{ color: colors.textPrimary }}>{formatPercentFromBps(reserve.reserveFactor)}</Text>
             </View>
             <View className="flex-1 border rounded-2xl p-4" style={{ borderColor: colors.border }}>
-              <Text className="text-sm" style={{ color: colors.textSecondary }}>Total borrowed</Text>
-              <Text className="text-lg font-bold mt-1.5" style={{ color: colors.textPrimary }}>{formatCompactNumber(totalBorrowed, decimals)}</Text>
+              <Text className="text-sm" style={{ color: colors.textSecondary }}>Collector Contract</Text>
+              {collectorExplorerUrl ? (
+                <View className="flex flex-row items-center gap-1 h-8 ">
+                  <ExternalLink href={collectorExplorerUrl as Href & string} >
+                    <Text className="text-lg font-bold" style={{ color: colors.textPrimary }} numberOfLines={1}>
+                      {collectorAddress ? 'View contract' : '-'}
+                    </Text>
+                  </ExternalLink>
+                  <FontAwesome name="external-link" size={16} style={{ color: colors.textSecondary }} />
+                </View>
+                
+
+              ) : (
+                <Text className="text-lg font-bold mt-1.5" style={{ color: colors.textPrimary }} numberOfLines={1}>
+                  {collectorAddress ?? '-'}
+                </Text>
+              )}
             </View>
           </View>
         </View>
 
-        <View className="rounded-3xl p-4 border" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+        <View className="rounded-3xl p-4 " style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
           <Text className="text-2xl font-bold" style={{ color: colors.textPrimary }}>Interest rate model</Text>
           <View className="flex-row items-center justify-between mt-3">
             <View>

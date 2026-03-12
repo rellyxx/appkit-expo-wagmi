@@ -4,6 +4,7 @@ export const AppTheme = {
   light: {
     pageBg: '#F4F6FB',
     cardBg: '#FFFFFF',
+    cardOpacityBg: '#121c3380',
     cardAltBg: '#F8FAFF',
     border: '#E5E7EB',
     textPrimary: '#111827',
@@ -21,7 +22,7 @@ export const AppTheme = {
   },
   dark: {
     pageBg: '#0F172A',
-    cardBg: '#111827',
+    cardBg: '#182442',
     cardAltBg: '#1E293B',
     border: '#334155',
     textPrimary: '#F8FAFC',

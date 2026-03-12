@@ -46,6 +46,37 @@ const projectId =
   Constants.expoConfig?.extra?.reownProjectId ??
   "4827883b8c3a2061c885e9c5117b0455";
 
+let fetchLoggerInstalled = false;
+
+function installFetchLogger() {
+  if (fetchLoggerInstalled) return;
+  if (typeof globalThis.fetch !== 'function') return;
+  const originalFetch = globalThis.fetch.bind(globalThis);
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const startedAt = Date.now();
+    const url =
+      typeof input === 'string'
+        ? input
+        : (input as { url?: string }).url ?? String(input);
+    const method =
+      init?.method ??
+      ((typeof input === 'object' && input && 'method' in input
+        ? (input as { method?: string }).method
+        : undefined) ?? 'GET');
+    try {
+      const response = await originalFetch(input, init);
+      const duration = Date.now() - startedAt;
+      console.log(`[net] ${method} ${response.status} ${duration}ms ${url}`);
+      return response;
+    } catch (error) {
+      const duration = Date.now() - startedAt;
+      console.log(`[net] ${method} ERR ${duration}ms ${url}`);
+      throw error;
+    }
+  }) as typeof globalThis.fetch;
+  fetchLoggerInstalled = true;
+}
+
 
 
 // 2. Create config
@@ -131,6 +162,12 @@ export default function RootLayout() {
   useEffect(() => {
     initializeTheme();
   }, [initializeTheme]);
+
+  useEffect(() => {
+    if (__DEV__) {
+      installFetchLogger();
+    }
+  }, []);
 
   useEffect(() => {
     SystemUI.setBackgroundColorAsync(colors.pageBg);
