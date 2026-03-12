@@ -27,7 +27,7 @@ type BorrowTabProps = {
   onToggleBorrowAprSort: () => void;
   onToggleAvailableBorrowBalanceSort: () => void;
   onToggleAvailableBorrowAprSort: () => void;
-  onTokenPress: (symbol: string) => void;
+  onTokenPress: (symbol: string, actionType: 'borrow' | 'repay') => void;
   themeColor: string;
   isDark: boolean;
 };
@@ -105,7 +105,7 @@ export function BorrowTab({
         borrows.map((item) => (
           <Pressable
             key={item.symbol}
-            onPress={() => onTokenPress(item.symbol)}
+            onPress={() => onTokenPress(item.symbol, 'repay')}
             className="rounded-2xl p-4 flex-row items-center justify-between shadow-md"
             style={{ backgroundColor: colors.cardBg }}
           >
@@ -184,7 +184,7 @@ export function BorrowTab({
       {availableToBorrow.map((item) => (
         <Pressable
           key={item.symbol}
-          onPress={() => onTokenPress(item.symbol)}
+          onPress={() => onTokenPress(item.symbol, 'borrow')}
           className="rounded-2xl p-4 flex-row items-center justify-between shadow-md"
           style={{ backgroundColor: colors.cardBg }}
         >

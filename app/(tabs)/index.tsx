@@ -527,10 +527,10 @@ export default function HomeScreen() {
   }, [borrows, borrowSortKey, borrowBalanceSortDirection, borrowAprSortDirection]);
 
   const pageWidth = contentWidth || Math.max(windowWidth - 40, 0);
-  const handleTokenPress = React.useCallback((symbol: string) => {
+  const handleTokenPress = React.useCallback((symbol: string, actionType: 'supply' | 'borrow' | 'withdraw' | 'repay') => {
     router.push({
       pathname: '/token/[symbol]',
-      params: { symbol },
+      params: { symbol, actionType },
     });
   }, [router]);
 

@@ -33,8 +33,16 @@ import {
 
 
 
+type TokenActionType = 'supply' | 'borrow' | 'withdraw' | 'repay';
+
+const isTokenActionType = (value: unknown): value is TokenActionType =>
+  value === 'supply' || value === 'borrow' || value === 'withdraw' || value === 'repay';
+
 export default function TokenDetailScreen() {
-  const { symbol } = useLocalSearchParams<{ symbol?: string | string[] }>();
+  const { symbol, actionType: actionTypeParam } = useLocalSearchParams<{
+    symbol?: string | string[];
+    actionType?: string | string[];
+  }>();
   const normalizedSymbol = normalizeSymbol(symbol);
   const reserves = useGlobalState((state) => state.reserves);
   const chainId = useGlobalState((state) => state.chainId);
@@ -44,7 +52,7 @@ export default function TokenDetailScreen() {
   const reserve = reserves.find((item) => item.symbol === normalizedSymbol);
   const [range, setRange] = React.useState<'1w' | '1m' | '6m' | '1y'>('1w');
   const [aprHistory, setAprHistory] = React.useState<ReserveAprPoint[]>([]);
-  const [actionType, setActionType] = React.useState<'supply' | 'borrow' | 'withdraw' | 'repay'>('supply');
+  const [actionType, setActionType] = React.useState<TokenActionType>('supply');
   const [actionAmount, setActionAmount] = React.useState('');
 
   const collectorContracts = React.useMemo(
@@ -122,6 +130,15 @@ export default function TokenDetailScreen() {
       active = false;
     };
   }, [chainId, normalizedSymbol, range]);
+
+  React.useEffect(() => {
+    const next = Array.isArray(actionTypeParam) ? actionTypeParam[0] : actionTypeParam;
+    if (isTokenActionType(next)) {
+      setActionType(next);
+      return;
+    }
+    setActionType('supply');
+  }, [actionTypeParam]);
 
   if (!reserve) {
     return (

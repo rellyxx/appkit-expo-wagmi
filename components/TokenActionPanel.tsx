@@ -1,14 +1,15 @@
 import React from 'react';
 import { View, Text, Pressable, TextInput } from 'react-native';
 import BigNumberJs from 'bignumber.js';
-import { erc20Abi, formatUnits } from 'viem';
+import { type Abi, erc20Abi, formatUnits, parseUnits } from 'viem';
 import { TokenIcon } from '@/components/TokenIcon';
 import { AppTheme } from '@/constants/AppTheme';
 import { useAppearanceState } from '@/store/useAppearanceState';
 import { useGlobalState } from '@/store/useGlobalState';
 import { calcHealth, formatBigintToString } from '@/utils/common';
-import { formatCompactNumber } from '@/utils/token';
-import { useAccount, useReadContracts } from 'wagmi';
+import { formatBalanceValue } from '@/utils/token';
+import { useAccount, useReadContracts, useWriteContract } from 'wagmi';
+import deployedContracts from '@/contracts/deployedContracts';
 
 type ActionOption = {
   key: 'supply' | 'borrow' | 'withdraw' | 'repay';
@@ -39,11 +40,25 @@ export function TokenActionPanel({
   const amountInputRef = React.useRef<TextInput>(null);
   const themeMode = useAppearanceState((state) => state.themeMode);
   const { address, chainId } = useAccount();
+  const { writeContractAsync } = useWriteContract();
   const healthFactor = useGlobalState((state) => state.healthFactor);
   const userAccountData = useGlobalState((state) => state.userAccountData);
   const reserves = useGlobalState((state) => state.reserves);
   const isDark = themeMode === 'dark';
   const colors = isDark ? AppTheme.dark : AppTheme.light;
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const deployedByChain =
+    deployedContracts as Record<number, (typeof deployedContracts)[keyof typeof deployedContracts]>;
+  const poolDataProvider = React.useMemo(
+    () => (chainId ? deployedByChain[chainId]?.PoolDataProvider : undefined),
+    [chainId, deployedByChain],
+  );
+  const poolDataProviderAbi = poolDataProvider?.abi as Abi | undefined;
+  const poolProxy = React.useMemo(
+    () => (chainId ? deployedByChain[chainId]?.PoolProxy : undefined),
+    [chainId, deployedByChain],
+  );
+  const poolProxyAbi = poolProxy?.abi as Abi | undefined;
   const reserve = React.useMemo(
     () =>
       reserves.find(
@@ -54,10 +69,6 @@ export function TokenActionPanel({
   const reserveSymbol = reserve?.symbol ?? '';
   const reserveName = reserve?.name ?? '';
   const decimals = Number(reserve?.decimals ?? 18);
-  const totalSupplies = reserve?.totalSupplies;
-  const totalBorrowed = reserve
-    ? (BigInt(reserve.totalPrincipalStableDebt ?? '0') + BigInt(reserve.totalCurrentVariableDebt ?? '0')).toString()
-    : '0';
   const availableLiquidity = reserve?.availableLiquidity;
   const priceInEth = reserve?.price?.priceInEth;
   const supplyApy = reserve ? Number(formatUnits(BigInt(reserve.liquidityRate ?? '0'), 27)) * 100 : 0;
@@ -83,11 +94,51 @@ export function TokenActionPanel({
     query: { enabled: walletBalanceContracts.length > 0 },
   });
 
+  const userReserveContracts = React.useMemo(
+    () =>
+      address && poolDataProvider?.address && poolDataProviderAbi
+        ? [
+            {
+              address: poolDataProvider.address as `0x${string}`,
+              abi: poolDataProviderAbi,
+              functionName: 'getUserReserveData' as const,
+              args: [tokenAddress as `0x${string}`, address] as const,
+              chainId,
+            },
+          ]
+        : [],
+    [address, chainId, poolDataProvider?.address, poolDataProviderAbi, tokenAddress],
+  );
+
+  const { data: userReserveResults } = useReadContracts({
+    contracts: userReserveContracts,
+    query: { enabled: userReserveContracts.length > 0 },
+  });
+
   const walletBalanceDisplay = React.useMemo(() => {
     const result = walletBalanceResults?.[0];
     if (result?.status !== 'success' || typeof result.result !== 'bigint') return '-';
-    return `${formatCompactNumber(result.result.toString(), decimals)} ${reserveSymbol}`;
+    const formatted = formatUnits(result.result, decimals);
+    return `${formatBalanceValue(formatted)} ${reserveSymbol}`;
   }, [walletBalanceResults, decimals, reserveSymbol]);
+  const currentSupplyBalance = React.useMemo(() => {
+    const result = userReserveResults?.[0];
+    if (result?.status !== 'success' || !Array.isArray(result.result)) return 0n;
+    const balance = result.result[0];
+    return typeof balance === 'bigint' ? balance : 0n;
+  }, [userReserveResults]);
+  const currentBorrowBalance = React.useMemo(() => {
+    const result = userReserveResults?.[0];
+    if (result?.status !== 'success' || !Array.isArray(result.result)) return 0n;
+    const stableDebt = result.result[1];
+    const variableDebt = result.result[2];
+    if (typeof stableDebt !== 'bigint' || typeof variableDebt !== 'bigint') return 0n;
+    return stableDebt + variableDebt;
+  }, [userReserveResults]);
+  const availableBorrowBase = React.useMemo(() => {
+    const available = userAccountData[2];
+    return typeof available === 'bigint' ? available : 0n;
+  }, [userAccountData]);
   const actionOptions = [
     { key: 'supply', label: 'Supply', color: colors.cyan },
     { key: 'borrow', label: 'Borrow', color: colors.purple },
@@ -97,16 +148,9 @@ export function TokenActionPanel({
 
   const actionBalanceLabelMap: Record<ActionOption['key'], string> = {
     supply: 'Wallet balance',
-    borrow: 'Available liquidity',
+    borrow: 'Available balance',
     withdraw: 'Supplied balance',
     repay: 'Borrowed balance',
-  };
-
-  const actionBalanceValueMap: Record<ActionOption['key'], string> = {
-    supply: walletBalanceDisplay,
-    borrow: `${formatCompactNumber(availableLiquidity, decimals)} ${reserveSymbol}`,
-    withdraw: `${formatCompactNumber(totalSupplies, decimals)} ${reserveSymbol}`,
-    repay: `${formatCompactNumber(totalBorrowed, decimals)} ${reserveSymbol}`,
   };
 
   const parsePriceInEth = (value?: string) => {
@@ -119,6 +163,114 @@ export function TokenActionPanel({
       return null;
     }
   };
+
+  const maxBorrowAmount = React.useMemo(() => {
+    const availableBorrowBaseAmount = new BigNumberJs(formatUnits(availableBorrowBase, 8));
+    const price = parsePriceInEth(priceInEth);
+    const availableByUser = price && price.isFinite() && price.gt(0)
+      ? availableBorrowBaseAmount.div(price)
+      : new BigNumberJs(0);
+    const liquidityBase = availableLiquidity ? BigInt(availableLiquidity) : 0n;
+    const liquidityAmount = new BigNumberJs(formatUnits(liquidityBase, decimals));
+    return BigNumberJs.min(availableByUser, liquidityAmount);
+  }, [availableBorrowBase, availableLiquidity, decimals, priceInEth]);
+
+  const maxBorrowDisplay = React.useMemo(() => {
+    if (!maxBorrowAmount.isFinite()) return '0';
+    return formatBalanceValue(maxBorrowAmount);
+  }, [maxBorrowAmount]);
+
+  const maxActionAmount = React.useMemo(() => {
+    if (actionType === 'supply') {
+      const result = walletBalanceResults?.[0];
+      if (result?.status !== 'success' || typeof result.result !== 'bigint') return '0.00';
+      return formatBalanceValue(formatUnits(result.result, decimals));
+    }
+    if (actionType === 'borrow') {
+      return maxBorrowAmount.isFinite() ? formatBalanceValue(maxBorrowAmount) : '0.00';
+    }
+    if (actionType === 'withdraw') {
+      return formatBalanceValue(formatUnits(currentSupplyBalance, decimals));
+    }
+    return formatBalanceValue(formatUnits(currentBorrowBalance, decimals));
+  }, [
+    actionType,
+    currentBorrowBalance,
+    currentSupplyBalance,
+    decimals,
+    maxBorrowAmount,
+    walletBalanceResults,
+  ]);
+
+  const actionBalanceValueMap: Record<ActionOption['key'], string> = {
+    supply: walletBalanceDisplay,
+    borrow: `${maxBorrowDisplay} ${reserveSymbol}`,
+    withdraw: `${formatBalanceValue(formatUnits(currentSupplyBalance, decimals))} ${reserveSymbol}`,
+    repay: `${formatBalanceValue(formatUnits(currentBorrowBalance, decimals))} ${reserveSymbol}`,
+  };
+  const hasInputAmount = actionAmount.trim().length > 0;
+
+  const handleActionPress = React.useCallback(async () => {
+    if (!hasInputAmount || isSubmitting) return;
+    if (!address || !poolProxy?.address || !poolProxyAbi) return;
+    const cleanedAmount = actionAmount.replace(/,/g, '').trim();
+    if (!cleanedAmount) return;
+    let amount: bigint;
+    try {
+      amount = parseUnits(cleanedAmount, decimals);
+    } catch {
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      if (actionType === 'supply') {
+        await writeContractAsync({
+          address: poolProxy.address as `0x${string}`,
+          abi: poolProxyAbi,
+          functionName: 'supply',
+          args: [tokenAddress as `0x${string}`, amount, address, 0],
+        });
+        return;
+      }
+      if (actionType === 'borrow') {
+        await writeContractAsync({
+          address: poolProxy.address as `0x${string}`,
+          abi: poolProxyAbi,
+          functionName: 'borrow',
+          args: [tokenAddress as `0x${string}`, amount, 2, 0, address],
+        });
+        return;
+      }
+      if (actionType === 'withdraw') {
+        await writeContractAsync({
+          address: poolProxy.address as `0x${string}`,
+          abi: poolProxyAbi,
+          functionName: 'withdraw',
+          args: [tokenAddress as `0x${string}`, amount, address],
+        });
+        return;
+      }
+      await writeContractAsync({
+        address: poolProxy.address as `0x${string}`,
+        abi: poolProxyAbi,
+        functionName: 'repay',
+        args: [tokenAddress as `0x${string}`, amount, 2, address],
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
+    actionAmount,
+    actionType,
+    address,
+    decimals,
+    hasInputAmount,
+    isSubmitting,
+    poolProxy?.address,
+    poolProxyAbi,
+    tokenAddress,
+    writeContractAsync,
+  ]);
 
   const buildPredictedHealthFactor = () => {
     if (!actionAmount.trim()) return healthFactor;
@@ -190,7 +342,6 @@ export function TokenActionPanel({
   const actionBalanceLabel = actionBalanceLabelMap[actionType];
   const actionBalanceValue = actionBalanceValueMap[actionType];
   const actionInfoItems = actionInfoMap[actionType];
-  const hasInputAmount = actionAmount.trim().length > 0;
   const parseHealthFactorNumber = (value: string) => {
     if (value === '∞') return Number.POSITIVE_INFINITY;
     return Number(value.replace('<', ''));
@@ -237,7 +388,11 @@ export function TokenActionPanel({
               <Text className="text-xs" style={{ color: colors.textSecondary }}>{reserveName}</Text>
             </View>
           </View>
-          <Pressable className="rounded-full px-3 py-1" style={{ backgroundColor: colors.border }}>
+          <Pressable
+            className="rounded-full px-3 py-1"
+            style={{ backgroundColor: colors.border }}
+            onPress={() => onActionAmountChange(maxActionAmount)}
+          >
             <Text className="text-xs font-semibold" style={{ color: colors.textSecondary }}>MAX</Text>
           </Pressable>
         </View>
@@ -288,7 +443,12 @@ export function TokenActionPanel({
         ))}
       </View>
 
-      <Pressable className="mt-4 rounded-2xl py-3 items-center" style={{ backgroundColor: colors.accent }}>
+      <Pressable
+        className="mt-4 rounded-2xl py-3 items-center"
+        disabled={!hasInputAmount || isSubmitting}
+        style={{ backgroundColor: hasInputAmount && !isSubmitting ? colors.accent : colors.border }}
+        onPress={handleActionPress}
+      >
         <Text className="text-[15px] font-bold text-white">{actionCtaLabel}</Text>
       </Pressable>
     </View>

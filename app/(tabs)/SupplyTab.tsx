@@ -20,7 +20,7 @@ type SupplyTabProps = {
   onToggleDepositBalanceSort: () => void;
   onToggleSupplyApySort: () => void;
   onToggleSupplyBalanceSort: () => void;
-  onTokenPress: (symbol: string) => void;
+  onTokenPress: (symbol: string, actionType: 'supply' | 'withdraw') => void;
   themeColor: string;
   isDark: boolean;
 };
@@ -97,7 +97,7 @@ export function SupplyTab({
         sortedDeposits.map((item) => (
           <Pressable
             key={item.symbol}
-            onPress={() => onTokenPress(item.symbol)}
+            onPress={() => onTokenPress(item.symbol, 'withdraw')}
             className="rounded-2xl p-4 flex-row items-center justify-between shadow-md"
             style={{ backgroundColor: colors.cardBg }}
           >
@@ -175,7 +175,7 @@ export function SupplyTab({
       {sortedAvailableToDeposit.map((item) => (
         <Pressable
           key={item.symbol}
-          onPress={() => onTokenPress(item.symbol)}
+          onPress={() => onTokenPress(item.symbol, 'supply')}
           className="rounded-2xl p-4 flex-row items-center justify-between shadow-md"
           style={{ backgroundColor: colors.cardBg }}
         >

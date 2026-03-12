@@ -98,6 +98,15 @@ export function formatCompactUsdValueFromTokens(tokenAmount: BigNumberJs, priceI
   }
 }
 
+export function formatBalanceValue(value: string | BigNumberJs) {
+  const amount = typeof value === 'string' ? new BigNumberJs(value) : value;
+  if (!amount.isFinite()) return '0.00';
+  const fixed = amount.toFixed(6, BigNumberJs.ROUND_DOWN);
+  const trimmed = fixed.replace(/\.?0+$/, '');
+  if (!trimmed.includes('.')) return `${trimmed}.00`;
+  return trimmed;
+}
+
 export function buildLinePoints({
   count,
   width,
