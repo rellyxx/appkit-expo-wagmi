@@ -6,7 +6,7 @@ import { TokenIcon } from '@/components/TokenIcon';
 import { AppTheme } from '@/constants/AppTheme';
 import { useAppearanceState } from '@/store/useAppearanceState';
 import { useGlobalState } from '@/store/useGlobalState';
-import { calcHealth, formatBigintToString } from '@/utils/common';
+import { calcHealth, formatBigintToString, isZeroAddress } from '@/utils/common';
 import { formatBalanceValue } from '@/utils/token';
 import { useAccount, useReadContracts, useWriteContract } from 'wagmi';
 import deployedContracts from '@/contracts/deployedContracts';
@@ -59,6 +59,11 @@ export function TokenActionPanel({
     [chainId, deployedByChain],
   );
   const poolProxyAbi = poolProxy?.abi as Abi | undefined;
+  const wrappedGateway = React.useMemo(
+    () => (chainId ? deployedByChain[chainId]?.WrappedTokenGatewayV3 : undefined),
+    [chainId, deployedByChain],
+  );
+  const wrappedGatewayAbi = wrappedGateway?.abi as Abi | undefined;
   const reserve = React.useMemo(
     () =>
       reserves.find(
@@ -69,6 +74,7 @@ export function TokenActionPanel({
   const reserveSymbol = reserve?.symbol ?? '';
   const reserveName = reserve?.name ?? '';
   const decimals = Number(reserve?.decimals ?? 18);
+  const isNativeAsset = reserve?.underlyingAsset ? isZeroAddress(reserve.underlyingAsset) : false;
   const availableLiquidity = reserve?.availableLiquidity;
   const priceInEth = reserve?.price?.priceInEth;
   const supplyApy = reserve ? Number(formatUnits(BigInt(reserve.liquidityRate ?? '0'), 27)) * 100 : 0;
@@ -92,6 +98,26 @@ export function TokenActionPanel({
   const { data: walletBalanceResults } = useReadContracts({
     contracts: walletBalanceContracts,
     query: { enabled: walletBalanceContracts.length > 0 },
+  });
+  const allowanceContracts = React.useMemo(
+    () =>
+      address && poolProxy?.address && !isNativeAsset
+        ? [
+            {
+              address: tokenAddress as `0x${string}`,
+              abi: erc20Abi,
+              functionName: 'allowance' as const,
+              args: [address, poolProxy.address as `0x${string}`] as const,
+              chainId,
+            },
+          ]
+        : [],
+    [address, chainId, isNativeAsset, poolProxy?.address, tokenAddress],
+  );
+
+  const { data: allowanceResults } = useReadContracts({
+    contracts: allowanceContracts,
+    query: { enabled: allowanceContracts.length > 0 },
   });
 
   const userReserveContracts = React.useMemo(
@@ -209,20 +235,82 @@ export function TokenActionPanel({
     repay: `${formatBalanceValue(formatUnits(currentBorrowBalance, decimals))} ${reserveSymbol}`,
   };
   const hasInputAmount = actionAmount.trim().length > 0;
+  const parsedAmount = React.useMemo(() => {
+    const cleanedAmount = actionAmount.replace(/,/g, '').trim();
+    if (!cleanedAmount) return null;
+    try {
+      return parseUnits(cleanedAmount, decimals);
+    } catch {
+      return null;
+    }
+  }, [actionAmount, decimals]);
+  const needsApprove = React.useMemo(() => {
+    if (isNativeAsset) return false;
+    if (actionType !== 'supply' && actionType !== 'repay') return false;
+    if (!parsedAmount) return false;
+    const allowanceResult = allowanceResults?.[0];
+    const allowanceValue =
+      allowanceResult?.status === 'success' && typeof allowanceResult.result === 'bigint'
+        ? allowanceResult.result
+        : 0n;
+    return allowanceValue < parsedAmount;
+  }, [actionType, allowanceResults, isNativeAsset, parsedAmount]);
 
   const handleActionPress = React.useCallback(async () => {
     if (!hasInputAmount || isSubmitting) return;
     if (!address || !poolProxy?.address || !poolProxyAbi) return;
-    const cleanedAmount = actionAmount.replace(/,/g, '').trim();
-    if (!cleanedAmount) return;
-    let amount: bigint;
-    try {
-      amount = parseUnits(cleanedAmount, decimals);
-    } catch {
-      return;
-    }
+    if (!parsedAmount) return;
+    const amount = parsedAmount;
     setIsSubmitting(true);
     try {
+      if (isNativeAsset) {
+        if (!wrappedGateway?.address || !wrappedGatewayAbi) return;
+        if (actionType === 'supply') {
+          await writeContractAsync({
+            address: wrappedGateway.address as `0x${string}`,
+            abi: wrappedGatewayAbi,
+            functionName: 'depositETH',
+            args: [poolProxy.address as `0x${string}`, address, 0],
+            value: amount,
+          });
+          return;
+        }
+        if (actionType === 'borrow') {
+          await writeContractAsync({
+            address: wrappedGateway.address as `0x${string}`,
+            abi: wrappedGatewayAbi,
+            functionName: 'borrowETH',
+            args: [poolProxy.address as `0x${string}`, amount, 2, 0],
+          });
+          return;
+        }
+        if (actionType === 'withdraw') {
+          await writeContractAsync({
+            address: wrappedGateway.address as `0x${string}`,
+            abi: wrappedGatewayAbi,
+            functionName: 'withdrawETH',
+            args: [poolProxy.address as `0x${string}`, amount, address],
+          });
+          return;
+        }
+        await writeContractAsync({
+          address: wrappedGateway.address as `0x${string}`,
+          abi: wrappedGatewayAbi,
+          functionName: 'repayETH',
+          args: [poolProxy.address as `0x${string}`, amount, 2, address],
+          value: amount,
+        });
+        return;
+      }
+      if (needsApprove) {
+        await writeContractAsync({
+          address: tokenAddress as `0x${string}`,
+          abi: erc20Abi,
+          functionName: 'approve',
+          args: [poolProxy.address as `0x${string}`, amount],
+        });
+        return;
+      }
       if (actionType === 'supply') {
         await writeContractAsync({
           address: poolProxy.address as `0x${string}`,
@@ -256,19 +344,24 @@ export function TokenActionPanel({
         functionName: 'repay',
         args: [tokenAddress as `0x${string}`, amount, 2, address],
       });
+    } catch (error) {
+      console.log('action error', error);
     } finally {
       setIsSubmitting(false);
     }
   }, [
-    actionAmount,
     actionType,
     address,
-    decimals,
     hasInputAmount,
     isSubmitting,
+    isNativeAsset,
+    needsApprove,
+    parsedAmount,
     poolProxy?.address,
     poolProxyAbi,
     tokenAddress,
+    wrappedGateway?.address,
+    wrappedGatewayAbi,
     writeContractAsync,
   ]);
 
@@ -327,6 +420,7 @@ export function TokenActionPanel({
   };
 
   const actionCtaLabel = (() => {
+    if (needsApprove) return 'Approve';
     switch (actionType) {
       case 'supply':
         return `Supply ${reserveSymbol}`;
