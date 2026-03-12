@@ -30,6 +30,8 @@ export default function HomeScreen() {
   const swipeHandledRef = React.useRef(false);
   const reserves = useGlobalState((state) => state.reserves);
   const healthFactor = useGlobalState((state) => state.healthFactor);
+  const totalCollateralBase = useGlobalState((state) => state.totalCollateralBase);
+  const totalDebtBase = useGlobalState((state) => state.totalDebtBase);
   const setHealthFactor = useGlobalState((state) => state.setHealthFactor);
   const setUserAccountData = useGlobalState((state) => state.setUserAccountData);
   const healthFactorNumber = Number(healthFactor.replace('<', ''));
@@ -40,6 +42,16 @@ export default function HomeScreen() {
         ? colors.accent
         : colors.danger
     : colors.textSecondary;
+
+  const netWorth = React.useMemo(() => {
+    const collateral = new BigNumberJs(totalCollateralBase);
+    const debt = new BigNumberJs(totalDebtBase);
+    const net = collateral.minus(debt);
+    const netValue = new BigNumberJs(formatUnits(BigInt(net.toFixed(0)), 8));
+    if (netValue.isLessThan(0.01) && netValue.isGreaterThan(0)) return '<0.01';
+    return netValue.toFormat(2);
+  }, [totalCollateralBase, totalDebtBase]);
+
   const { address, chainId } = useAccount();
   const deployedByChain =
     deployedContracts as Record<number, (typeof deployedContracts)[keyof typeof deployedContracts]>;
@@ -580,9 +592,13 @@ export default function HomeScreen() {
 
         <View className="rounded-[20px] p-5 gap-2 shadow-lg" style={{ backgroundColor: colors.accent }}>
           <Text className="text-sm font-semibold text-[#E5EDFF]">Net Worth</Text>
-          <View className="self-start rounded-full bg-white/20 px-2.5 py-1.5">
+          <Text className="text-4xl font-bold text-[#E5EDFF]">${netWorth}</Text>
+          <View className="self-start rounded-full bg-white/20 px-2.5 py-1.5 flex-row items-center gap-1">
+            <Text className="text-xs font-semibold text-[#E5EDFF]">
+              Health Factor:
+            </Text>
             <Text className="text-xs font-semibold" style={{ color: healthFactorColor }}>
-              Health Factor:{healthFactor}
+              {healthFactor}
             </Text>
           </View>
         </View>
