@@ -1,12 +1,14 @@
 import React from 'react';
 import { View, Text, Pressable, TextInput } from 'react-native';
 import BigNumberJs from 'bignumber.js';
-import { formatUnits } from 'viem';
+import { erc20Abi, formatUnits } from 'viem';
 import { TokenIcon } from '@/components/TokenIcon';
 import { AppTheme } from '@/constants/AppTheme';
 import { useAppearanceState } from '@/store/useAppearanceState';
 import { useGlobalState } from '@/store/useGlobalState';
 import { calcHealth, formatBigintToString } from '@/utils/common';
+import { formatCompactNumber } from '@/utils/token';
+import { useAccount, useReadContracts } from 'wagmi';
 
 type ActionOption = {
   key: 'supply' | 'borrow' | 'withdraw' | 'repay';
@@ -20,16 +22,7 @@ type InfoItem = {
 };
 
 type TokenActionPanelProps = {
-  reserveSymbol: string;
-  reserveName: string;
-  decimals: number;
-  totalSupplies: string | undefined;
-  totalBorrowed: string;
-  availableLiquidity: string | undefined;
-  priceInEth: string | undefined;
-  supplyApy: number;
-  borrowApy: number;
-  formatCompactNumber: (raw: string | undefined, decimals: number) => string;
+  tokenAddress: string;
   actionType: ActionOption['key'];
   onActionTypeChange: (next: ActionOption['key']) => void;
   actionAmount: string;
@@ -37,16 +30,7 @@ type TokenActionPanelProps = {
 };
 
 export function TokenActionPanel({
-  reserveSymbol,
-  reserveName,
-  decimals,
-  totalSupplies,
-  totalBorrowed,
-  availableLiquidity,
-  priceInEth,
-  supplyApy,
-  borrowApy,
-  formatCompactNumber,
+  tokenAddress,
   actionType,
   onActionTypeChange,
   actionAmount,
@@ -54,10 +38,56 @@ export function TokenActionPanel({
 }: TokenActionPanelProps) {
   const amountInputRef = React.useRef<TextInput>(null);
   const themeMode = useAppearanceState((state) => state.themeMode);
+  const { address, chainId } = useAccount();
   const healthFactor = useGlobalState((state) => state.healthFactor);
   const userAccountData = useGlobalState((state) => state.userAccountData);
+  const reserves = useGlobalState((state) => state.reserves);
   const isDark = themeMode === 'dark';
   const colors = isDark ? AppTheme.dark : AppTheme.light;
+  const reserve = React.useMemo(
+    () =>
+      reserves.find(
+        (item) => item.underlyingAsset?.toLowerCase() === tokenAddress.toLowerCase(),
+      ),
+    [reserves, tokenAddress],
+  );
+  const reserveSymbol = reserve?.symbol ?? '';
+  const reserveName = reserve?.name ?? '';
+  const decimals = Number(reserve?.decimals ?? 18);
+  const totalSupplies = reserve?.totalSupplies;
+  const totalBorrowed = reserve
+    ? (BigInt(reserve.totalPrincipalStableDebt ?? '0') + BigInt(reserve.totalCurrentVariableDebt ?? '0')).toString()
+    : '0';
+  const availableLiquidity = reserve?.availableLiquidity;
+  const priceInEth = reserve?.price?.priceInEth;
+  const supplyApy = reserve ? Number(formatUnits(BigInt(reserve.liquidityRate ?? '0'), 27)) * 100 : 0;
+  const borrowApy = reserve ? Number(formatUnits(BigInt(reserve.variableBorrowRate ?? '0'), 27)) * 100 : 0;
+  const walletBalanceContracts = React.useMemo(
+    () =>
+      address
+        ? [
+            {
+              address: tokenAddress as `0x${string}`,
+              abi: erc20Abi,
+              functionName: 'balanceOf' as const,
+              args: [address] as const,
+              chainId,
+            },
+          ]
+        : [],
+    [address, chainId, tokenAddress],
+  );
+
+  const { data: walletBalanceResults } = useReadContracts({
+    contracts: walletBalanceContracts,
+    query: { enabled: walletBalanceContracts.length > 0 },
+  });
+
+  const walletBalanceDisplay = React.useMemo(() => {
+    const result = walletBalanceResults?.[0];
+    if (result?.status !== 'success' || typeof result.result !== 'bigint') return '-';
+    return `${formatCompactNumber(result.result.toString(), decimals)} ${reserveSymbol}`;
+  }, [walletBalanceResults, decimals, reserveSymbol]);
   const actionOptions = [
     { key: 'supply', label: 'Supply', color: colors.cyan },
     { key: 'borrow', label: 'Borrow', color: colors.purple },
@@ -73,7 +103,7 @@ export function TokenActionPanel({
   };
 
   const actionBalanceValueMap: Record<ActionOption['key'], string> = {
-    supply: '-',
+    supply: walletBalanceDisplay,
     borrow: `${formatCompactNumber(availableLiquidity, decimals)} ${reserveSymbol}`,
     withdraw: `${formatCompactNumber(totalSupplies, decimals)} ${reserveSymbol}`,
     repay: `${formatCompactNumber(totalBorrowed, decimals)} ${reserveSymbol}`,

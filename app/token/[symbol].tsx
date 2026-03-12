@@ -3,10 +3,12 @@ import { View, Text, ScrollView, Pressable } from 'react-native';
 import { Stack, useLocalSearchParams, type Href } from 'expo-router';
 import BigNumberJs from 'bignumber.js';
 import { formatUnits, type Abi } from 'viem';
-import Svg, { Circle, Line, Polyline } from 'react-native-svg';
+import Svg, { Line, Polyline } from 'react-native-svg';
 import { TokenIcon } from '@/components/TokenIcon';
 import { TokenActionPanel } from '@/components/TokenActionPanel';
 import { ExternalLink } from '@/components/ExternalLink';
+import { ProgressRing } from '@/components/ProgressRing';
+import { PlaceholderChart } from '@/components/PlaceholderChart';
 import { useGlobalState } from '@/store/useGlobalState';
 import { useAppearanceState } from '@/store/useAppearanceState';
 import { fetchReserveAprHistory, type ReserveAprPoint } from '@/services/graph/fetch';
@@ -14,235 +16,22 @@ import { AppTheme } from '@/constants/AppTheme';
 import { useReadContracts } from 'wagmi';
 import bTokenAbi from '@/contracts/IBTokenABI.json';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import {
+  EXPLORER_BASE_BY_CHAIN,
+  buildLinePoints,
+  buildLinePointsFromValues,
+  formatCompactNumber,
+  formatCompactTokenAmount,
+  formatCompactUsdValue,
+  formatCompactUsdValueFromTokens,
+  formatOraclePrice,
+  formatPercentFromBps,
+  formatPercentFromDecimal,
+  formatShortDate,
+  normalizeSymbol,
+} from '@/utils/token';
 
-function normalizeSymbol(symbol?: string | string[]) {
-  if (Array.isArray(symbol)) return symbol[0] ?? '';
-  return symbol ?? '';
-}
 
-function formatAmount(raw: string | undefined, decimals: number) {
-  if (!raw) return '0';
-  try {
-    const normalized = formatUnits(BigInt(raw), decimals);
-    const amount = new BigNumberJs(normalized);
-    if (!amount.isFinite()) return '0';
-    if (amount.gt(0) && amount.lt(0.0001)) return '<0.0001';
-    return amount.toFormat(4);
-  } catch {
-    return '0';
-  }
-}
-
-function formatOraclePrice(priceInEth?: string) {
-  if (!priceInEth) return '0.00';
-  try {
-    const value = priceInEth.includes('.')
-      ? new BigNumberJs(priceInEth)
-      : new BigNumberJs(formatUnits(BigInt(priceInEth), 8));
-    if (!value.isFinite()) return '0.00';
-    if (value.gt(0) && value.lt(0.01)) return '0.00';
-    return value.toFormat(2);
-  } catch {
-    return '0.00';
-  }
-}
-
-function formatPercentFromDecimal(value?: string) {
-  if (!value) return '0.00%';
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return '0.00%';
-  const percentage = parsed <= 1 ? parsed * 100 : parsed;
-  return `${percentage.toFixed(2)}%`;
-}
-
-function formatPercentFromBps(value?: string) {
-  if (!value) return '0.00%';
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return '0.00%';
-  return `${(parsed / 100).toFixed(2)}%`;
-}
-
-function formatCompactNumber(raw: string | undefined, decimals: number) {
-  const amount = Number(formatAmount(raw, decimals).replace(/,/g, ''));
-  if (!Number.isFinite(amount)) return '0';
-  if (amount >= 1_000_000_000) return `${(amount / 1_000_000_000).toFixed(2)}B`;
-  if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(2)}M`;
-  if (amount >= 1_000) return `${(amount / 1_000).toFixed(2)}K`;
-  return amount.toFixed(2);
-}
-
-function formatCompactTokenAmount(amount: BigNumberJs) {
-  if (!amount.isFinite()) return '0';
-  if (amount.gte(1_000_000_000)) return `${amount.div(1_000_000_000).toFormat(2)}B`;
-  if (amount.gte(1_000_000)) return `${amount.div(1_000_000).toFormat(2)}M`;
-  if (amount.gte(1_000)) return `${amount.div(1_000).toFormat(2)}K`;
-  return amount.toFormat(2);
-}
-
-function formatCompactUsdValue(raw: string | undefined, decimals: number, priceInEth?: string) {
-  if (!raw || !priceInEth) return '0.00';
-  try {
-    const tokenAmount = new BigNumberJs(formatUnits(BigInt(raw), decimals));
-    const price = priceInEth.includes('.')
-      ? new BigNumberJs(priceInEth)
-      : new BigNumberJs(formatUnits(BigInt(priceInEth), 8));
-    if (!tokenAmount.isFinite() || !price.isFinite()) return '0.00';
-    const value = tokenAmount.times(price);
-    if (!value.isFinite() || value.isNaN()) return '0.00';
-    if (value.gt(0) && value.lt(0.01)) return '0.00';
-    return value.toFormat(2);
-  } catch {
-    return '0.00';
-  }
-}
-
-function formatCompactUsdValueFromTokens(tokenAmount: BigNumberJs, priceInEth?: string) {
-  if (!priceInEth) return '0.00';
-  try {
-    const price = priceInEth.includes('.')
-      ? new BigNumberJs(priceInEth)
-      : new BigNumberJs(formatUnits(BigInt(priceInEth), 8));
-    if (!tokenAmount.isFinite() || !price.isFinite()) return '0.00';
-    const value = tokenAmount.times(price);
-    if (!value.isFinite() || value.isNaN()) return '0.00';
-    if (value.gt(0) && value.lt(0.01)) return '0.00';
-    return value.toFormat(2);
-  } catch {
-    return '0.00';
-  }
-}
-
-function buildLinePoints({
-  count,
-  width,
-  height,
-  seed,
-  base,
-  swing,
-}: {
-  count: number;
-  width: number;
-  height: number;
-  seed: number;
-  base: number;
-  swing: number;
-}) {
-  const points: string[] = [];
-  for (let i = 0; i < count; i += 1) {
-    const x = (i / (count - 1)) * width;
-    const noise = Math.sin((i + seed) * 1.37) * 0.45 + Math.cos((i + seed) * 0.72) * 0.2;
-    const value = Math.max(0, Math.min(1, base + noise * swing));
-    const y = (1 - value) * height;
-    points.push(`${x.toFixed(2)},${y.toFixed(2)}`);
-  }
-  return points.join(' ');
-}
-
-function buildLinePointsFromValues(values: number[], width: number, height: number) {
-  if (values.length === 0) return '';
-  if (values.length === 1) {
-    const y = height / 2;
-    return `0,${y.toFixed(2)} ${width.toFixed(2)},${y.toFixed(2)}`;
-  }
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = max - min || 1;
-  const points: string[] = [];
-  values.forEach((value, index) => {
-    const x = (index / (values.length - 1)) * width;
-    const normalized = (value - min) / range;
-    const y = height - normalized * height;
-    points.push(`${x.toFixed(2)},${y.toFixed(2)}`);
-  });
-  return points.join(' ');
-}
-
-const EXPLORER_BASE_BY_CHAIN: Record<number, string> = {
-  56: 'https://bscscan.com',
-  97: 'https://testnet.bscscan.com',
-  688689: 'https://atlantic.pharosscan.xyz',
-};
-
-function formatShortDate(timestamp?: number) {
-  if (!timestamp) return '-';
-  const date = new Date(timestamp * 1000);
-  const month = `${date.getMonth() + 1}`.padStart(2, '0');
-  const day = `${date.getDate()}`.padStart(2, '0');
-  return `${month}/${day}`;
-}
-
-function ProgressRing({ percent, isDark }: { percent: number; isDark: boolean }) {
-  const colors = isDark ? AppTheme.dark : AppTheme.light;
-  const size = 78;
-  const strokeWidth = 8;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const normalized = Math.max(0, Math.min(100, percent));
-  const offset = circumference * (1 - normalized / 100);
-
-  return (
-    <View className="items-center justify-center">
-      <Svg width={size} height={size}>
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke={colors.border}
-          strokeWidth={strokeWidth}
-          fill="none"
-        />
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke={colors.success}
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={`${circumference} ${circumference}`}
-          strokeDashoffset={offset}
-          fill="none"
-          rotation="-90"
-          origin={`${size / 2}, ${size / 2}`}
-        />
-      </Svg>
-      <Text className="text-sm font-bold absolute" style={{ color: colors.textPrimary }}>{normalized.toFixed(2)}%</Text>
-    </View>
-  );
-}
-
-function PlaceholderChart({
-  lineColor,
-  avgLabel,
-  points,
-  xLabels,
-  isDark,
-}: {
-  lineColor: string;
-  avgLabel: string;
-  points: string;
-  xLabels: [string, string, string];
-  isDark: boolean;
-}) {
-  const colors = isDark ? AppTheme.dark : AppTheme.light;
-  return (
-    <View className="mt-3 rounded-2xl border px-3 py-2.5" style={{ backgroundColor: colors.cardAltBg, borderColor: colors.border }}>
-      <View className="self-start rounded-full px-3 py-1 border" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
-        <Text className="text-sm font-semibold" style={{ color: colors.textPrimary }}>{avgLabel}</Text>
-      </View>
-      <Svg width="100%" height={124} viewBox="0 0 320 124">
-        <Line x1="0" y1="35" x2="320" y2="35" stroke={colors.lineGrid} strokeWidth="1" strokeDasharray="4 4" />
-        <Line x1="0" y1="70" x2="320" y2="70" stroke={colors.lineGrid} strokeWidth="1" strokeDasharray="4 4" />
-        <Line x1="0" y1="105" x2="320" y2="105" stroke={colors.lineGrid} strokeWidth="1" strokeDasharray="4 4" />
-        <Polyline points={points} fill="none" stroke={lineColor} strokeWidth="3" strokeLinecap="round" />
-      </Svg>
-      <View className="flex-row justify-between px-1">
-        <Text className="text-xs" style={{ color: colors.textSecondary }}>{xLabels[0]}</Text>
-        <Text className="text-xs" style={{ color: colors.textSecondary }}>{xLabels[1]}</Text>
-        <Text className="text-xs" style={{ color: colors.textSecondary }}>{xLabels[2]}</Text>
-      </View>
-    </View>
-  );
-}
 
 export default function TokenDetailScreen() {
   const { symbol } = useLocalSearchParams<{ symbol?: string | string[] }>();
@@ -425,16 +214,7 @@ export default function TokenDetailScreen() {
         </View>
 
         <TokenActionPanel
-          reserveSymbol={reserve.symbol}
-          reserveName={reserve.name}
-          decimals={decimals}
-          totalSupplies={reserve.totalSupplies}
-          totalBorrowed={totalBorrowed}
-          availableLiquidity={reserve.availableLiquidity}
-          priceInEth={reserve.price?.priceInEth}
-          supplyApy={supplyApy}
-          borrowApy={borrowApy}
-          formatCompactNumber={formatCompactNumber}
+          tokenAddress={reserve.underlyingAsset}
           actionType={actionType}
           onActionTypeChange={setActionType}
           actionAmount={actionAmount}
