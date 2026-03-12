@@ -36,22 +36,6 @@ export function DashboardHeader({ title }: Props) {
         </View>
         <AppKitButton
           label="Connect Wallet"
-          accountStyle={{
-            paddingHorizontal: 12,
-            height: 36,
-            borderRadius: 12,
-            backgroundColor: isDark ? '#1E293B' : '#FFFFFF',
-            borderWidth: 1,
-            borderColor: isDark ? '#334155' : '#E5E7EB',
-          }}
-          connectStyle={{
-            paddingHorizontal: 12,
-            height: 36,
-            borderRadius: 12,
-            backgroundColor: isDark ? '#1E293B' : themeColor,
-            borderWidth: isDark ? 1 : 0,
-            borderColor: isDark ? '#334155' : undefined,
-          }}
         />
       </View>
     </View>

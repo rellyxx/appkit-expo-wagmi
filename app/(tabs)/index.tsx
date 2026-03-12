@@ -29,6 +29,17 @@ export default function HomeScreen() {
   const scrollRef = React.useRef<ScrollView>(null);
   const swipeHandledRef = React.useRef(false);
   const reserves = useGlobalState((state) => state.reserves);
+  const healthFactor = useGlobalState((state) => state.healthFactor);
+  const setHealthFactor = useGlobalState((state) => state.setHealthFactor);
+  const setUserAccountData = useGlobalState((state) => state.setUserAccountData);
+  const healthFactorNumber = Number(healthFactor.replace('<', ''));
+  const healthFactorColor = Number.isFinite(healthFactorNumber)
+    ? healthFactorNumber >= 2
+      ? colors.success
+      : healthFactorNumber >= 1.2
+        ? colors.accent
+        : colors.danger
+    : colors.textSecondary;
   const { address, chainId } = useAccount();
   const deployedByChain =
     deployedContracts as Record<number, (typeof deployedContracts)[keyof typeof deployedContracts]>;
@@ -333,6 +344,44 @@ export default function HomeScreen() {
     return typeof availableBorrowsBase === 'bigint' ? availableBorrowsBase : 0n;
   }, [userAccountResults]);
 
+  const healthFactorDisplay = React.useMemo(() => {
+    const result = userAccountResults?.[0];
+    if (result?.status !== 'success' || !Array.isArray(result.result)) {
+      return '0.00';
+    }
+    const value = result.result[5];
+    if (typeof value !== 'bigint') return '0.00';
+    const normalized = new BigNumberJs(formatUnits(value, 18));
+    if (!normalized.isFinite()) return '0.00';
+    if (normalized.gt(0) && normalized.lt(0.01)) return '<0.01';
+    return normalized.toFixed(2);
+  }, [userAccountResults]);
+
+  React.useEffect(() => {
+    setHealthFactor(healthFactorDisplay);
+    const result = userAccountResults?.[0];
+    if (result?.status !== 'success' || !Array.isArray(result.result)) {
+      setUserAccountData({
+        totalCollateralBase: '0',
+        totalDebtBase: '0',
+        currentLiquidationThreshold: '0',
+        userAccountData: [],
+      });
+      return;
+    }
+    const totalCollateralBase = result.result[0];
+    const totalDebtBase = result.result[1];
+    const currentLiquidationThreshold = result.result[3];
+    setUserAccountData({
+      totalCollateralBase: typeof totalCollateralBase === 'bigint' ? totalCollateralBase.toString() : '0',
+      totalDebtBase: typeof totalDebtBase === 'bigint' ? totalDebtBase.toString() : '0',
+      currentLiquidationThreshold: typeof currentLiquidationThreshold === 'bigint'
+        ? currentLiquidationThreshold.toString()
+        : '0',
+      userAccountData: result.result.filter((item): item is bigint => typeof item === 'bigint'),
+    });
+  }, [healthFactorDisplay, setHealthFactor, setUserAccountData, userAccountResults]);
+
   const deposits = activeReserves
     .map((reserve, index) => {
       const result = supplyBalanceResults?.[index];
@@ -532,7 +581,9 @@ export default function HomeScreen() {
         <View className="rounded-[20px] p-5 gap-2 shadow-lg" style={{ backgroundColor: colors.accent }}>
           <Text className="text-sm font-semibold text-[#E5EDFF]">Net Worth</Text>
           <View className="self-start rounded-full bg-white/20 px-2.5 py-1.5">
-            <Text className="text-xs font-semibold text-white">↗  +2.4% vs last week</Text>
+            <Text className="text-xs font-semibold" style={{ color: healthFactorColor }}>
+              Health Factor:{healthFactor}
+            </Text>
           </View>
         </View>
 

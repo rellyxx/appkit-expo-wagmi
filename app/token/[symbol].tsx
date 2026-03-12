@@ -5,6 +5,7 @@ import BigNumberJs from 'bignumber.js';
 import { formatUnits, type Abi } from 'viem';
 import Svg, { Circle, Line, Polyline } from 'react-native-svg';
 import { TokenIcon } from '@/components/TokenIcon';
+import { TokenActionPanel } from '@/components/TokenActionPanel';
 import { ExternalLink } from '@/components/ExternalLink';
 import { useGlobalState } from '@/store/useGlobalState';
 import { useAppearanceState } from '@/store/useAppearanceState';
@@ -254,6 +255,8 @@ export default function TokenDetailScreen() {
   const reserve = reserves.find((item) => item.symbol === normalizedSymbol);
   const [range, setRange] = React.useState<'1w' | '1m' | '6m' | '1y'>('1w');
   const [aprHistory, setAprHistory] = React.useState<ReserveAprPoint[]>([]);
+  const [actionType, setActionType] = React.useState<'supply' | 'borrow' | 'withdraw' | 'repay'>('supply');
+  const [actionAmount, setActionAmount] = React.useState('');
 
   const collectorContracts = React.useMemo(
     () =>
@@ -399,7 +402,6 @@ export default function TokenDetailScreen() {
     { label: 'Utilization Rate', value: formatPercentFromDecimal(reserve.utilizationRate) },
     { label: 'Oracle price', value: `$ ${formatOraclePrice(reserve.price?.priceInEth)}` },
   ];
-
   return (
     <View className="flex-1" style={{ backgroundColor: colors.pageBg }}>
       <Stack.Screen options={{ title: `${reserve.symbol} Detail`, headerStyle: { backgroundColor: colors.pageBg } }} />
@@ -421,6 +423,23 @@ export default function TokenDetailScreen() {
             ))}
           </View>
         </View>
+
+        <TokenActionPanel
+          reserveSymbol={reserve.symbol}
+          reserveName={reserve.name}
+          decimals={decimals}
+          totalSupplies={reserve.totalSupplies}
+          totalBorrowed={totalBorrowed}
+          availableLiquidity={reserve.availableLiquidity}
+          priceInEth={reserve.price?.priceInEth}
+          supplyApy={supplyApy}
+          borrowApy={borrowApy}
+          formatCompactNumber={formatCompactNumber}
+          actionType={actionType}
+          onActionTypeChange={setActionType}
+          actionAmount={actionAmount}
+          onActionAmountChange={setActionAmount}
+        />
 
         <View className="rounded-3xl p-4 " style={{ backgroundColor: colors.cardBg}}>
           <Text className="text-xl font-bold" style={{ color: colors.textPrimary }}>Supply Info</Text>
