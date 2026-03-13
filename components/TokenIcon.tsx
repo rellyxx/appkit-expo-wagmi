@@ -1,7 +1,8 @@
 import React from 'react';
 import { Image, Text, View } from 'react-native';
 import { Asset } from 'expo-asset';
-import { SvgUri } from 'react-native-svg';
+import * as FileSystem from 'expo-file-system';
+import { SvgXml } from 'react-native-svg';
 
 type Props = {
   symbol: string;
@@ -25,13 +26,13 @@ export function TokenIcon({ symbol, size = 28 }: Props) {
   const normalizedSymbol = symbol.toUpperCase();
   const svgModule = svgTokenMap[normalizedSymbol];
 
-  const [svgUri, setSvgUri] = React.useState<string | null>(null);
+  const [svgXml, setSvgXml] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
 
     if (!svgModule) {
-      setSvgUri(null);
+      setSvgXml(null);
       return () => {
         cancelled = true;
       };
@@ -42,12 +43,21 @@ export function TokenIcon({ symbol, size = 28 }: Props) {
     (async () => {
       try {
         await asset.downloadAsync();
+      } catch {
+      }
+
+      try {
+        const uri = asset.localUri ?? asset.uri;
+        const xml = asset.localUri
+          ? await FileSystem.readAsStringAsync(uri)
+          : await (await fetch(uri)).text();
+
         if (!cancelled) {
-          setSvgUri(asset.localUri ?? asset.uri);
+          setSvgXml(xml);
         }
       } catch {
         if (!cancelled) {
-          setSvgUri(asset.uri);
+          setSvgXml(null);
         }
       }
     })();
@@ -58,13 +68,13 @@ export function TokenIcon({ symbol, size = 28 }: Props) {
   }, [svgModule]);
 
   if (svgModule) {
-    if (!svgUri) {
+    if (!svgXml) {
       return <View style={{ width: size, height: size }} />;
     }
 
     return (
       <View style={{ width: size, height: size }}>
-        <SvgUri width={size} height={size} uri={svgUri} />
+        <SvgXml width={size} height={size} xml={svgXml} />
       </View>
     );
   }
