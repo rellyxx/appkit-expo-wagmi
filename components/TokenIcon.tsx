@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image, Text, View } from 'react-native';
 import { Asset } from 'expo-asset';
-import * as FileSystem from 'expo-file-system';
+import { File } from 'expo-file-system';
 import { SvgXml } from 'react-native-svg';
 
 type Props = {
@@ -38,19 +38,22 @@ export function TokenIcon({ symbol, size = 28 }: Props) {
       };
     }
 
-    const asset = Asset.fromModule(svgModule);
-
     (async () => {
       try {
-        await asset.downloadAsync();
-      } catch {
-      }
+        const loadedAssets = await Asset.loadAsync(svgModule);
+        const asset = loadedAssets[0] ?? Asset.fromModule(svgModule);
+        const ensured = asset.localUri ? asset : await asset.downloadAsync();
+        const localUri = ensured.localUri;
+        const remoteUri = ensured.uri;
 
-      try {
-        const uri = asset.localUri ?? asset.uri;
-        const xml = asset.localUri
-          ? await FileSystem.readAsStringAsync(uri)
-          : await (await fetch(uri)).text();
+        let xml: string | null = null;
+
+        if (localUri) {
+          const normalizedLocalUri = localUri.startsWith('file://') ? localUri : `file://${localUri}`;
+          xml = await new File(normalizedLocalUri).text();
+        } else if (remoteUri?.startsWith('http://') || remoteUri?.startsWith('https://')) {
+          xml = await (await fetch(remoteUri)).text();
+        }
 
         if (!cancelled) {
           setSvgXml(xml);
@@ -65,11 +68,17 @@ export function TokenIcon({ symbol, size = 28 }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [svgModule]);
+  }, [svgModule, normalizedSymbol]);
 
   if (svgModule) {
     if (!svgXml) {
-      return <View style={{ width: size, height: size }} />;
+      return (
+        <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontWeight: '700', fontSize: Math.max(10, Math.floor(size * 0.45)) }}>
+            {normalizedSymbol.slice(0, 1)}
+          </Text>
+        </View>
+      );
     }
 
     return (
