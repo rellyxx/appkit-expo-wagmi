@@ -24,11 +24,47 @@ const imageTokenMap: Record<string, number> = {
 export function TokenIcon({ symbol, size = 28 }: Props) {
   const normalizedSymbol = symbol.toUpperCase();
   const svgModule = svgTokenMap[normalizedSymbol];
+
+  const [svgUri, setSvgUri] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    if (!svgModule) {
+      setSvgUri(null);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const asset = Asset.fromModule(svgModule);
+
+    (async () => {
+      try {
+        await asset.downloadAsync();
+        if (!cancelled) {
+          setSvgUri(asset.localUri ?? asset.uri);
+        }
+      } catch {
+        if (!cancelled) {
+          setSvgUri(asset.uri);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [svgModule]);
+
   if (svgModule) {
-    const uri = Asset.fromModule(svgModule).uri;
+    if (!svgUri) {
+      return <View style={{ width: size, height: size }} />;
+    }
+
     return (
       <View style={{ width: size, height: size }}>
-        <SvgUri width={size} height={size} uri={uri} />
+        <SvgUri width={size} height={size} uri={svgUri} />
       </View>
     );
   }
